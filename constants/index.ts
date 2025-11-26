@@ -1,0 +1,1 @@
+export const DATABASE_NAME = 'bank_transaction.db';
