@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1764061123619,
-      "tag": "0000_simple_shadow_king",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1732622400000,
-      "tag": "0001_add_settings_table",
+      "when": 1764327517485,
+      "tag": "0000_futuristic_sasquatch",
       "breakpoints": true
     }
   ]

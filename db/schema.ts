@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 import { int, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const settingsTable = sqliteTable("settings_table", {
+export const settingsTable = sqliteTable("settings", {
     id: int().primaryKey({ autoIncrement: true }),
     key: text().notNull().unique(),
     value: text().notNull(),
@@ -9,26 +9,28 @@ export const settingsTable = sqliteTable("settings_table", {
 export type SelectSetting = typeof settingsTable.$inferSelect;
 export type InsertSetting = typeof settingsTable.$inferInsert;
 
-export const banksTable = sqliteTable("banks_table", {
+export const banksTable = sqliteTable("banks", {
     id: int().primaryKey({ autoIncrement: true }),
     name: text().notNull(),
 })
 export type SelectBank = typeof banksTable.$inferSelect;
 export type InsertBank = typeof banksTable.$inferInsert;
 
-export const transactionsTable = sqliteTable("transactions_table", {
+export const transactionsTable = sqliteTable("transactions", {
     id: int().primaryKey({ autoIncrement: true }),
     name: text().notNull(),
     accountId: int().notNull().references(() => accountsTable.id),
     amount: real().notNull(),
+    accountNo: text().notNull(),
     receiver: text().notNull(),
     reference: text().notNull(),
     date: text().notNull(),
+    timestamp: int().notNull()
 })
 export type SelectTransaction = typeof transactionsTable.$inferSelect;
 export type InsertTransaction = typeof transactionsTable.$inferInsert;
 
-export const accountsTable = sqliteTable("accounts_table", {
+export const accountsTable = sqliteTable("accounts", {
     id: int().primaryKey({ autoIncrement: true }),
     name: text().notNull(),
     bankId: int().notNull().references(() => banksTable.id),

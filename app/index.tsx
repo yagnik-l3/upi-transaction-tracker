@@ -64,7 +64,7 @@ export default function HomeScreen() {
         const transactions = await readSms(lastTimestamp);
         let newTxCount = 0;
         const txs: InsertTransaction[] = [];
-        let maxTimestamp = lastTimestamp;
+        let maxTimestamp = lastTimestamp ?? 0;
 
         for (const tx of transactions) {
           const accounts = await accountQueries.findAll({});
@@ -77,25 +77,27 @@ export default function HomeScreen() {
               amount: tx.amount,
               receiver: tx.receiver,
               reference: tx.reference,
-              date: tx.date
+              date: tx.date,
+              timestamp: tx.timestamp,
+              accountNo: tx.senderAccountNo
             })
             newTxCount++;
+          }
 
-            // Track the latest timestamp
-            const txTimestamp = new Date(tx.date).getTime();
-            if (txTimestamp > maxTimestamp) {
-              maxTimestamp = txTimestamp;
-            }
+          // Track the latest timestamp even if message is not of transaction
+          const txTimestamp = tx.timestamp;
+          if (txTimestamp > maxTimestamp) {
+            maxTimestamp = txTimestamp;
           }
         }
 
         if (txs.length > 0) {
           await transactionQueries.createMany(txs);
-          // Update last SMS timestamp
-          await settingQueries.setLastSmsTimestamp(maxTimestamp);
           console.log(`Added ${newTxCount} new transactions`);
         }
 
+        // Update last SMS timestamp
+        await settingQueries.setLastSmsTimestamp(maxTimestamp + 1);
       } catch (e) {
         console.error(e);
       }

@@ -2,13 +2,13 @@ import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
 import * as transactionQueries from '@/db/queries/transaction';
 import { SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { format } from 'date-fns';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Searchbar, Text, useTheme } from 'react-native-paper';
+import { Searchbar, Text } from 'react-native-paper';
 
 export default function TransactionsScreen() {
-    const theme = useTheme();
     const colorScheme = useColorScheme();
     const { accountId } = useLocalSearchParams();
     const [transactions, setTransactions] = useState<SelectTransaction[]>([]);
@@ -23,7 +23,6 @@ export default function TransactionsScreen() {
 
     const loadTransactions = async () => {
         const txs = await transactionQueries.findAll({ accountId: Number(accountId) });
-        console.log("transactions", txs);
         setTransactions(txs);
         setFilteredTransactions(txs);
     };
@@ -57,8 +56,7 @@ export default function TransactionsScreen() {
                             {item.receiver}
                         </Text>
                         <Text variant="bodySmall" style={[styles.date, { color: themeColors.icon }]}>
-                            {item.date}
-                            {/* {format(new Date(item.date), 'dd MMM yyyy, hh:mm a')} */}
+                            {format(new Date(item.timestamp), 'dd MMM yyyy, hh:mm a')}
                         </Text>
                     </View>
                 </View>

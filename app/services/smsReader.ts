@@ -23,7 +23,7 @@ export const requestSmsPermission = async (): Promise<boolean> => {
     }
 };
 
-export const readSms = async (minDate?: number): Promise<ParsedTransaction[]> => {
+export const readSms = async (minDate: number): Promise<ParsedTransaction[]> => {
     return new Promise((resolve, reject) => {
         if (Platform.OS !== 'android') {
             resolve([]);
@@ -32,8 +32,9 @@ export const readSms = async (minDate?: number): Promise<ParsedTransaction[]> =>
 
         const filter = {
             box: 'inbox',
-            minDate: minDate || 0, // 0 = all time
-            maxCount: 1000, // Limit to avoid performance issues
+            minDate, // 0 = all time
+            // maxDate: startOfNextDay,
+            // maxCount: 3, // Limit to avoid performance issues
             read: 1
         };
 
@@ -50,7 +51,7 @@ export const readSms = async (minDate?: number): Promise<ParsedTransaction[]> =>
                 arr.forEach((object: any) => {
                     const parsed = parseSMS(object.body);
                     if (parsed) {
-                        transactions.push(parsed);
+                        transactions.push({ ...parsed, timestamp: object.date });
                     }
                 });
                 resolve(transactions);

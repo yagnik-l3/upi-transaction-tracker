@@ -4,6 +4,8 @@ export interface ParsedTransaction {
     reference: string;
     date: string; // ISO string
     bankName: string; // 'BOB', 'HDFC', 'RBL'
+    timestamp: number;
+    senderAccountNo: string;
 }
 
 // Regex Patterns
@@ -12,64 +14,64 @@ export interface ParsedTransaction {
 // BOB format:
 // Rs.100.00 Dr. ... Cr. to JARRETAIL@ybl ... (2025:10:04 ...)
 const bobRegex =
-    /Rs\.([\d.]+)\s+Dr\..*?Cr\. to ([\w@.-]+).*?Ref:(\d+).*?AvlBal:Rs([\d.]+)\((\d{4}):(\d{2}):(\d{2})/g;
-
-// HDFC format:
-// Sent Rs.35000.00 ... On 05/10/25 ... Ref 112193812012
-const hdfcRegex =
-    /Sent Rs\.([\d.]+).*?From HDFC.*?To (.*?)\s+On (\d{2})\/(\d{2})\/(\d{2}).*?Ref (\d+)/gs;
+    /^Rs\.?(?<amount>\d+(?:\.\d{2})?)\s+Dr\. from A\/C\s+(?<account>X+\d+)\s+and Cr\. to\s+(?<receiver>[A-Za-z0-9@\-.]+)\.\s+Ref:(?<upi_ref>\d+)\.\s+AvlBal:Rs\d+(?:\.\d+)?\/(?<yyyy>\d{4}):(?<mm>\d{2}):(?<dd>\d{2}) (?<hh>\d{2}):(?<min>\d{2}):(?<ss>\d{2})/g;
 
 // RBL UPI ONLY format:
 // Your a/c XX5678 is debited for Rs.10000 on 21-11-25 ... (UPI Ref XXXXX)
 const rblUPIRegex =
-    /Your a\/c .*? is debited for Rs\.([\d.]+).*?on (\d{2})-(\d{2})-(\d{2}).*?\(UPI Ref (\d+)/g;
+    /Your a\/c (?<account>XX\d+) is debited for Rs\.?(?<amount>\d+(?:\.\d{2})?) on (?<dd>\d{2})-(?<mm>\d{2})-(?<yy>\d{2}) and credited to a\/c (?<receiver>XX\d+) .*?UPI Ref(?: no)? (?<upi_ref>\d+)/g;
 
 const PATTERNS = {
     BOB: {
         regex: bobRegex,
         parse: (match: RegExpMatchArray): ParsedTransaction => {
-            const yyyy = match[4];
-            const mm = match[5];
-            const dd = match[6];
+            const yyyy = match.groups?.yy ?? "";
+            const mm = match.groups?.mm ?? "";
+            const dd = match.groups?.dd ?? "";
 
             return {
-                amount: parseFloat(match[1]),
-                receiver: match[2],
-                reference: match[3],
+                amount: parseFloat(match.groups?.amount ?? "0"),
+                receiver: match.groups?.receiver ?? "NA",
+                reference: match.groups?.upi_ref ?? "NA-REF",
                 bankName: 'BOB',
                 date: `${yyyy}-${mm}-${dd}`,
+                timestamp: 0,
+                senderAccountNo: match.groups?.account ?? "XXX-NA"
             };
         }
     },
-    HDFC: {
-        regex: hdfcRegex,
-        parse: (match: RegExpMatchArray): ParsedTransaction => {
-            const yyyy = "20" + match[5];
-            const mm = match[4];
-            const dd = match[3];
+    // HDFC: {
+    //     regex: hdfcRegex,
+    //     parse: (match: RegExpMatchArray): ParsedTransaction => {
+    //         const yyyy = "20" + match[5];
+    //         const mm = match[4];
+    //         const dd = match[3];
 
-            return {
-                amount: parseFloat(match[1]),
-                receiver: match[2].trim(),
-                reference: match[6],
-                bankName: 'HDFC',
-                date: `${yyyy}-${mm}-${dd}`,
-            };
-        }
-    },
+    //         return {
+    //             amount: parseFloat(match[1]),
+    //             receiver: match[2].trim(),
+    //             reference: match[6],
+    //             bankName: 'HDFC',
+    //             date: `${yyyy}-${mm}-${dd}`,
+    //             timestamp: 0
+    //         };
+    //     }
+    // },
     RBL: {
         regex: rblUPIRegex,
         parse: (match: RegExpMatchArray): ParsedTransaction => {
-            const yyyy = "20" + match[4];
-            const mm = match[3];
-            const dd = match[2];
+            const yyyy = "20" + match.groups?.yy;
+            const mm = match.groups?.mm ?? "";
+            const dd = match.groups?.dd ?? "";
 
             return {
-                amount: parseFloat(match[1]),
-                receiver: "UPI Transfer (RBL)",
-                reference: match[5],
+                amount: parseFloat(match?.groups?.amount ?? "0"),
+                receiver: match?.groups?.receiver ?? "NA",
+                reference: match?.groups?.upi_ref ?? "NA-REF",
                 bankName: 'RBL',
                 date: `${yyyy}-${mm}-${dd}`,
+                timestamp: 0,
+                senderAccountNo: match.groups?.account ?? "XXX-NA"
             };
         }
     }

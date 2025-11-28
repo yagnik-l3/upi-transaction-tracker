@@ -1,11 +1,11 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6bd59794-fc37-41d2-84cc-136d41d0f963",
+  "id": "17bfbd16-f1eb-46b9-ac67-ec0a3cc4b164",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "accounts_table": {
-      "name": "accounts_table",
+    "accounts": {
+      "name": "accounts",
       "columns": {
         "id": {
           "name": "id",
@@ -38,10 +38,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "accounts_table_bankId_banks_table_id_fk": {
-          "name": "accounts_table_bankId_banks_table_id_fk",
-          "tableFrom": "accounts_table",
-          "tableTo": "banks_table",
+        "accounts_bankId_banks_id_fk": {
+          "name": "accounts_bankId_banks_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "banks",
           "columnsFrom": [
             "bankId"
           ],
@@ -56,8 +56,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "banks_table": {
-      "name": "banks_table",
+    "banks": {
+      "name": "banks",
       "columns": {
         "id": {
           "name": "id",
@@ -80,8 +80,47 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "transactions_table": {
-      "name": "transactions_table",
+    "settings": {
+      "name": "settings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "settings_key_unique": {
+          "name": "settings_key_unique",
+          "columns": [
+            "key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "transactions": {
+      "name": "transactions",
       "columns": {
         "id": {
           "name": "id",
@@ -131,14 +170,21 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "transactions_table_accountId_accounts_table_id_fk": {
-          "name": "transactions_table_accountId_accounts_table_id_fk",
-          "tableFrom": "transactions_table",
-          "tableTo": "accounts_table",
+        "transactions_accountId_accounts_id_fk": {
+          "name": "transactions_accountId_accounts_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "accounts",
           "columnsFrom": [
             "accountId"
           ],
