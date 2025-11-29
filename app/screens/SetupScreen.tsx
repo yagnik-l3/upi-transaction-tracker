@@ -16,6 +16,7 @@ export default function SetupScreen() {
     const [banks, setBanks] = useState<SelectBank[]>([]);
     const [selectedBank, setSelectedBank] = useState<SelectBank | null>(null);
     const [friendlyName, setFriendlyName] = useState('');
+    const [accountNo, setAccountNo] = useState('');
     const [upiLimit, setUpiLimit] = useState('');
     const [menuVisible, setMenuVisible] = useState(false);
 
@@ -36,9 +37,10 @@ export default function SetupScreen() {
 
         try {
             await accountQueries.create({
-                bankId: selectedBank.id,
+                bankName: selectedBank.name,
                 name: friendlyName,
-                upiLimit: parseFloat(upiLimit)
+                upiLimit: parseFloat(upiLimit),
+                accountNo: accountNo
             });
 
             setFriendlyName('');
@@ -106,6 +108,16 @@ export default function SetupScreen() {
                         label="Friendly Name (e.g., Salary Account)"
                         value={friendlyName}
                         onChangeText={setFriendlyName}
+                        mode="outlined"
+                        style={styles.input}
+                        left={<TextInput.Icon icon="account-circle" />}
+                        outlineColor={themeColors.cardBorder}
+                        activeOutlineColor={themeColors.primary}
+                    />
+                    <TextInput
+                        label="Account Number"
+                        value={accountNo}
+                        onChangeText={setAccountNo}
                         mode="outlined"
                         style={styles.input}
                         left={<TextInput.Icon icon="account-circle" />}

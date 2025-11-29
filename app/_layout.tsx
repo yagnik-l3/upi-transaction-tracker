@@ -2,8 +2,10 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense, useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ActivityIndicator, MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 
 import { DATABASE_NAME } from '@/constants';
 import { db } from '@/db';
@@ -35,36 +37,39 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Suspense fallback={<ActivityIndicator size="large" />}>
-      <SQLiteProvider
-        databaseName={DATABASE_NAME}
-        onInit={async () => {
-          try {
-            // await migrate(db, migrations);
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Suspense fallback={<ActivityIndicator size="large" />}>
+        <SQLiteProvider
+          databaseName={DATABASE_NAME}
+          onInit={async () => {
+            try {
+              // await migrate(db, migrations);
 
-            // Seed default banks
-            await seedDefaultBanks();
-          } catch (error) {
-            console.error("Migration error", error);
-          }
-        }}
-      >
-        <PaperProvider theme={theme}>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen
-                name="index"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen name="screens/SetupScreen" options={{ title: 'Setup' }} />
-              <Stack.Screen name="screens/TransactionsScreen" options={{ title: 'Transactions' }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </PaperProvider>
-      </SQLiteProvider>
-    </Suspense>
+              // Seed default banks
+              await seedDefaultBanks();
+            } catch (error) {
+              console.error("Migration error", error);
+            }
+          }}
+        >
+          <PaperProvider theme={theme}>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen
+                  name="index"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen name="screens/SetupScreen" options={{ title: 'Setup' }} />
+                <Stack.Screen name="screens/TransactionsScreen" options={{ title: 'Transactions' }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </PaperProvider>
+        </SQLiteProvider>
+        <Toast />
+      </Suspense>
+    </GestureHandlerRootView>
   );
 }

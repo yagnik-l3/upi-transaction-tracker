@@ -1,6 +1,6 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import SmsAndroid from 'react-native-get-sms-android';
-import { ParsedTransaction, parseSMS } from './smsParser';
+import { ParsedTransactionWithRawMessage, parseSMS } from './smsParser';
 
 export const requestSmsPermission = async (): Promise<boolean> => {
     if (Platform.OS !== 'android') return false;
@@ -23,7 +23,7 @@ export const requestSmsPermission = async (): Promise<boolean> => {
     }
 };
 
-export const readSms = async (minDate: number): Promise<ParsedTransaction[]> => {
+export const readSms = async (minDate: number): Promise<ParsedTransactionWithRawMessage[]> => {
     return new Promise((resolve, reject) => {
         if (Platform.OS !== 'android') {
             resolve([]);
@@ -46,12 +46,12 @@ export const readSms = async (minDate: number): Promise<ParsedTransaction[]> => 
             },
             (count: number, smsList: string) => {
                 const arr = JSON.parse(smsList);
-                const transactions: ParsedTransaction[] = [];
+                const transactions: ParsedTransactionWithRawMessage[] = [];
 
                 arr.forEach((object: any) => {
                     const parsed = parseSMS(object.body);
                     if (parsed) {
-                        transactions.push({ ...parsed, timestamp: object.date });
+                        transactions.push({ ...parsed, timestamp: object.date, rawMessage: object.body });
                     }
                 });
                 resolve(transactions);

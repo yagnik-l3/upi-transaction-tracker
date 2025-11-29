@@ -1,6 +1,6 @@
 import type { SQL } from "drizzle-orm";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 
 import { db } from "..";
 import { transactionsTable, type InsertTransaction } from "../schema";
@@ -35,27 +35,28 @@ export async function findOne_And(data: { id?: number; accountId?: number }) {
     });
 }
 
-export async function findAll(data: { accountId?: number }) {
+export async function findAll(data: { accountNo?: string, bankName?: string }) {
     const conditions: SQL[] = []
-    if (data.accountId) {
-        conditions.push(eq(transactionsTable.accountId, data.accountId))
+    if (data.accountNo) {
+        conditions.push(eq(transactionsTable.accountNo, data.accountNo))
+    }
+    if (data.bankName) {
+        conditions.push(eq(transactionsTable.bankName, data.bankName))
     }
     return db.query.transactionsTable.findMany({
         where: and(...conditions),
-        with: {
-            account: true
-        }
     });
 }
 
-export async function getDailyTotal(accountId: number, date: string): Promise<number> {
-    // date format expected: YYYY-MM-DD
+export async function getDailyTotal(accountNo: string, bankName: string, date: string): Promise<number> {
     const transactions = await db.query.transactionsTable.findMany({
         where: and(
-            eq(transactionsTable.accountId, accountId)
+            eq(transactionsTable.accountNo, accountNo),
+            eq(transactionsTable.bankName, bankName),
+            gte(transactionsTable.timestamp, Date.parse(date)),
+            lte(transactionsTable.timestamp, Date.parse(date))
         ),
     });
 
-    const dailyTransactions = transactions.filter(tx => tx.date.startsWith(date));
-    return dailyTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    return transactions.reduce((sum, tx) => sum + tx.amount, 0);
 }

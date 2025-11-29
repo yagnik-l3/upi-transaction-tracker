@@ -35,16 +35,16 @@ export async function findOne_And(data: { id?: number; name?: string }) {
     });
 }
 
-export async function findAll(data: { bankId?: number }) {
+export async function findAll(data: { bankName?: string, accountNo?: string }) {
     const conditions: SQL[] = []
-    if (data.bankId) {
-        conditions.push(eq(accountsTable.bankId, data.bankId))
+    if (data.bankName) {
+        conditions.push(eq(accountsTable.bankName, data.bankName))
+    }
+    if (data.accountNo) {
+        conditions.push(eq(accountsTable.accountNo, data.accountNo))
     }
     return db.query.accountsTable.findMany({
         where: and(...conditions),
-        with: {
-            bank: true
-        }
     });
 }
 

@@ -2,7 +2,7 @@ import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
 import * as accountQueries from '@/db/queries/account';
 import * as settingQueries from '@/db/queries/setting';
 import * as transactionQueries from '@/db/queries/transaction';
-import { InsertTransaction, SelectAccount, SelectBank } from '@/db/schema';
+import { InsertTransaction, SelectAccount } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { format } from 'date-fns';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const [accounts, setAccounts] = useState<(SelectAccount & { bank: SelectBank } & { dailyTotal: number })[]>([]);
+  const [accounts, setAccounts] = useState<(SelectAccount & { dailyTotal: number })[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
 
@@ -33,7 +33,7 @@ export default function HomeScreen() {
       const today = format(new Date(), 'yyyy-MM-dd');
 
       const accountsWithTotal = await Promise.all(accounts.map(async (acc) => {
-        const total = await transactionQueries.getDailyTotal(acc.id, today);
+        const total = await transactionQueries.getDailyTotal(acc.accountNo, acc.bankName, today);
         return { ...acc, dailyTotal: total };
       }));
 
@@ -62,27 +62,23 @@ export default function HomeScreen() {
 
         // Read only new SMS messages
         const transactions = await readSms(lastTimestamp);
+
         let newTxCount = 0;
         const txs: InsertTransaction[] = [];
         let maxTimestamp = lastTimestamp ?? 0;
 
         for (const tx of transactions) {
-          const accounts = await accountQueries.findAll({});
-          const account = accounts.find(a => a.bank.name.toLowerCase() === tx.bankName.toLowerCase());
-
-          if (account) {
-            txs.push({
-              name: tx.bankName,
-              accountId: account.id,
-              amount: tx.amount,
-              receiver: tx.receiver,
-              reference: tx.reference,
-              date: tx.date,
-              timestamp: tx.timestamp,
-              accountNo: tx.senderAccountNo
-            })
-            newTxCount++;
-          }
+          txs.push({
+            bankName: tx.bankName,
+            accountNo: tx.accountNo,
+            amount: tx.amount,
+            receiver: tx.receiver,
+            reference: tx.reference,
+            date: tx.date,
+            timestamp: tx.timestamp,
+            rawMessage: tx.rawMessage
+          })
+          newTxCount++;
 
           // Track the latest timestamp even if message is not of transaction
           const txTimestamp = tx.timestamp;
@@ -94,10 +90,11 @@ export default function HomeScreen() {
         if (txs.length > 0) {
           await transactionQueries.createMany(txs);
           console.log(`Added ${newTxCount} new transactions`);
+
+          // Update last SMS timestamp
+          await settingQueries.setLastSmsTimestamp(maxTimestamp + 1);
         }
 
-        // Update last SMS timestamp
-        await settingQueries.setLastSmsTimestamp(maxTimestamp + 1);
       } catch (e) {
         console.error(e);
       }
@@ -109,7 +106,7 @@ export default function HomeScreen() {
     const today = format(new Date(), 'yyyy-MM-dd');
 
     for (const acc of updatedAccounts) {
-      const total = await transactionQueries.getDailyTotal(acc.id, today);
+      const total = await transactionQueries.getDailyTotal(acc.accountNo, acc.bankName, today);
       if (acc.upiLimit > 0 && total >= acc.upiLimit) {
         await scheduleNotification(
           'UPI Limit Reached',
@@ -203,7 +200,7 @@ export default function HomeScreen() {
                           {account.name}
                         </Text>
                         <Text variant="bodyMedium" style={[styles.bankName, { color: themeColors.icon }]}>
-                          {account.bank.name}
+                          {account.bankName}
                         </Text>
                       </View>
                       <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>

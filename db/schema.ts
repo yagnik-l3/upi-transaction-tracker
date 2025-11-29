@@ -1,5 +1,4 @@
-import { relations } from "drizzle-orm";
-import { int, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, int, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 export const settingsTable = sqliteTable("settings", {
     id: int().primaryKey({ autoIncrement: true }),
@@ -18,42 +17,29 @@ export type InsertBank = typeof banksTable.$inferInsert;
 
 export const transactionsTable = sqliteTable("transactions", {
     id: int().primaryKey({ autoIncrement: true }),
-    name: text().notNull(),
-    accountId: int().notNull().references(() => accountsTable.id),
     amount: real().notNull(),
-    accountNo: text().notNull(),
     receiver: text().notNull(),
     reference: text().notNull(),
     date: text().notNull(),
-    timestamp: int().notNull()
-})
+    bankName: text().notNull(),
+    timestamp: int().notNull(),
+    accountNo: text().notNull(),
+    rawMessage: text().notNull(),
+}, (table) => [
+    index("transactions_idx").on(table.bankName, table.accountNo),
+])
 export type SelectTransaction = typeof transactionsTable.$inferSelect;
 export type InsertTransaction = typeof transactionsTable.$inferInsert;
 
 export const accountsTable = sqliteTable("accounts", {
     id: int().primaryKey({ autoIncrement: true }),
     name: text().notNull(),
-    bankId: int().notNull().references(() => banksTable.id),
+    bankName: text().notNull(),
+    accountNo: text().notNull(),
     upiLimit: real().notNull(),
-});
+}, (table) => [
+    unique().on(table.accountNo, table.bankName),
+    index("accounts_idx").on(table.accountNo, table.bankName)
+]);
 export type SelectAccount = typeof accountsTable.$inferSelect;
 export type InsertAccount = typeof accountsTable.$inferInsert;
-
-export const bankRelations = relations(banksTable, ({ many }) => ({
-    accounts: many(accountsTable),
-}));
-
-export const accountRelations = relations(accountsTable, ({ one, many }) => ({
-    bank: one(banksTable, {
-        fields: [accountsTable.bankId],
-        references: [banksTable.id],
-    }),
-    transactions: many(transactionsTable),
-}));
-
-export const transactionRelations = relations(transactionsTable, ({ one }) => ({
-    account: one(accountsTable, {
-        fields: [transactionsTable.accountId],
-        references: [accountsTable.id],
-    }),
-}));

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "17bfbd16-f1eb-46b9-ac67-ec0a3cc4b164",
+  "id": "97f77cb9-9b78-4d1b-9051-18147c70ec61",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "accounts": {
@@ -21,9 +21,16 @@
           "notNull": true,
           "autoincrement": false
         },
-        "bankId": {
-          "name": "bankId",
-          "type": "integer",
+        "bankName": {
+          "name": "bankName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accountNo": {
+          "name": "accountNo",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -36,22 +43,25 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "accounts_bankId_banks_id_fk": {
-          "name": "accounts_bankId_banks_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "banks",
-          "columnsFrom": [
-            "bankId"
+      "indexes": {
+        "accounts_idx": {
+          "name": "accounts_idx",
+          "columns": [
+            "accountNo",
+            "bankName"
           ],
-          "columnsTo": [
-            "id"
+          "isUnique": false
+        },
+        "accounts_accountNo_bankName_unique": {
+          "name": "accounts_accountNo_bankName_unique",
+          "columns": [
+            "accountNo",
+            "bankName"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "isUnique": true
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -129,20 +139,6 @@
           "notNull": true,
           "autoincrement": true
         },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "accountId": {
-          "name": "accountId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "amount": {
           "name": "amount",
           "type": "real",
@@ -171,30 +167,46 @@
           "notNull": true,
           "autoincrement": false
         },
+        "bankName": {
+          "name": "bankName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "timestamp": {
           "name": "timestamp",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "accountNo": {
+          "name": "accountNo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rawMessage": {
+          "name": "rawMessage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "transactions_accountId_accounts_id_fk": {
-          "name": "transactions_accountId_accounts_id_fk",
-          "tableFrom": "transactions",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "accountId"
+      "indexes": {
+        "transactions_idx": {
+          "name": "transactions_idx",
+          "columns": [
+            "bankName",
+            "accountNo"
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "isUnique": false
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
