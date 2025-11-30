@@ -18,12 +18,12 @@ export type ParsedTransactionWithRawMessage = ParsedTransaction & {
 // BOB format:
 // Rs.100.00 Dr. ... Cr. to JARRETAIL@ybl ... (2025:10:04 ...)
 const bobRegex =
-    /^Rs\.?(?<amount>\d+(?:\.\d{2})?)\s+Dr\. from A\/C\s+(?<account>X+\d+)\s+and Cr\. to\s+(?<receiver>[A-Za-z0-9@\-.]+)\.\s+Ref:(?<upi_ref>\d+)\.\s+AvlBal:Rs\d+(?:\.\d+)?\/(?<yyyy>\d{4}):(?<mm>\d{2}):(?<dd>\d{2}) (?<hh>\d{2}):(?<min>\d{2}):(?<ss>\d{2})/gm;
+    /^Rs\.?(?<amount>\d+(?:\.\d{2})?) Dr\. from A\/C (?<account>XXXXXX\d+) and Cr\. to (?<receiver>[^\s]+) .*?Ref:? ?(?<upi_ref>\d+)\. AvlBal:Rs[\d\.]+\((?<yy>\d{4}):(?<mm>\d{2}):(?<dd>\d{2}) \d{2}:\d{2}:\d{2}\)/m;
 
 // RBL UPI ONLY format:
 // Your a/c XX5678 is debited for Rs.10000 on 21-11-25 ... (UPI Ref XXXXX)
 const rblUPIRegex =
-    /Your a\/c (?<account>XX\d+) is debited for Rs\.?(?<amount>\d+(?:\.\d{2})?) on (?<dd>\d{2})-(?<mm>\d{2})-(?<yy>\d{2}) and credited to a\/c (?<receiver>XX\d+) .*?UPI Ref(?: no)? (?<upi_ref>\d+)/gm;
+    /^Your a\/c (?<account>XX\d+) is debited for Rs\.?(?<amount>\d+(?:\.\d{2})?) on (?<dd>\d{2})-(?<mm>\d{2})-(?<yy>\d{2}) and credited to a\/c (?<receiver>XX\d+) .*?UPI Ref(?: no)? (?<upi_ref>\d+)/m;
 
 const hdfcRegex =
     /^Sent Rs\.?(?<amount>\d+(?:\.\d{2})?)\s*From HDFC Bank A\/C [X*]*?(?<account>\d{4})\s*To (?<receiver>[A-Z ]+)\s*On (?<dd>\d{2})\/(?<mm>\d{2})\/(?<yy>\d{2})\s*Ref (?<upi_ref>\d+)/gm;

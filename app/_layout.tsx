@@ -43,8 +43,6 @@ export default function RootLayout() {
           databaseName={DATABASE_NAME}
           onInit={async () => {
             try {
-              // await migrate(db, migrations);
-
               // Seed default banks
               await seedDefaultBanks();
             } catch (error) {

@@ -1,3 +1,4 @@
+// import fs from "node:fs";
 import { PermissionsAndroid, Platform } from 'react-native';
 import SmsAndroid from 'react-native-get-sms-android';
 import { ParsedTransactionWithRawMessage, parseSMS } from './smsParser';
@@ -35,9 +36,10 @@ export const readSms = async (minDate: number): Promise<ParsedTransactionWithRaw
             minDate, // 0 = all time
             // maxDate: startOfNextDay,
             // maxCount: 3, // Limit to avoid performance issues
-            read: 1
+            indexFrom: 0
         };
 
+        const tran: string[] = [];
         SmsAndroid.list(
             JSON.stringify(filter),
             (fail: string) => {
@@ -49,6 +51,7 @@ export const readSms = async (minDate: number): Promise<ParsedTransactionWithRaw
                 const transactions: ParsedTransactionWithRawMessage[] = [];
 
                 arr.forEach((object: any) => {
+                    tran.push(object.body)
                     const parsed = parseSMS(object.body);
                     if (parsed) {
                         transactions.push({ ...parsed, timestamp: object.date, rawMessage: object.body });
@@ -58,4 +61,5 @@ export const readSms = async (minDate: number): Promise<ParsedTransactionWithRaw
             }
         );
     });
+
 };

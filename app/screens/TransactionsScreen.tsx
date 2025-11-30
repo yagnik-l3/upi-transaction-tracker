@@ -28,7 +28,8 @@ type CategoryFilter = 'all' | 'Food & Dining' | 'Personal Care & Beauty' | 'Misc
 export default function TransactionsScreen() {
     const colorScheme = useColorScheme();
     const navigation = useNavigation();
-    const { accountId, accountNo, bankName } = useLocalSearchParams();
+    const { accountNo, bankName } = useLocalSearchParams();
+
     const [transactions, setTransactions] = useState<SelectTransaction[]>([]);
     const [filteredTransactions, setFilteredTransactions] = useState<SelectTransaction[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -39,7 +40,6 @@ export default function TransactionsScreen() {
     // Bottom sheet refs
     const detailSheetRef = useRef<BottomSheet>(null);
     const addSheetRef = useRef<BottomSheet>(null);
-    const filterSheetRef = useRef<BottomSheet>(null);
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -241,6 +241,7 @@ export default function TransactionsScreen() {
             });
             addSheetRef.current?.close();
         } catch (error) {
+            console.error(error)
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Toast.show({
                 type: 'error',
@@ -296,7 +297,7 @@ export default function TransactionsScreen() {
                             </View>
                             <View style={[styles.badge, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder }]}>
                                 <MaterialIcons name="receipt" size={12} color={themeColors.icon} />
-                                <Text style={[styles.badgeText, { color: themeColors.icon }]}>A/C {item.reference}</Text>
+                                <Text style={[styles.badgeText, { color: themeColors.icon }]}>REF - {item.reference}</Text>
                             </View>
                         </View>
                         <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}>
@@ -341,6 +342,42 @@ export default function TransactionsScreen() {
                 />
             </View>
 
+            {/* Filter Chips */}
+            <View style={styles.filterContainer}>
+                <Chip
+                    selected={dateFilter === 'all'}
+                    onPress={() => setDateFilter('all')}
+                    style={[styles.filterChip, dateFilter === 'all' && { backgroundColor: themeColors.primary }]}
+                    textStyle={[styles.filterChipText, dateFilter === 'all' && { color: '#fff' }]}
+                >
+                    All
+                </Chip>
+                <Chip
+                    selected={dateFilter === 'today'}
+                    onPress={() => setDateFilter('today')}
+                    style={[styles.filterChip, dateFilter === 'today' && { backgroundColor: themeColors.primary }]}
+                    textStyle={[styles.filterChipText, dateFilter === 'today' && { color: '#fff' }]}
+                >
+                    Today
+                </Chip>
+                <Chip
+                    selected={dateFilter === 'week'}
+                    onPress={() => setDateFilter('week')}
+                    style={[styles.filterChip, dateFilter === 'week' && { backgroundColor: themeColors.primary }]}
+                    textStyle={[styles.filterChipText, dateFilter === 'week' && { color: '#fff' }]}
+                >
+                    Week
+                </Chip>
+                <Chip
+                    selected={dateFilter === 'month'}
+                    onPress={() => setDateFilter('month')}
+                    style={[styles.filterChip, dateFilter === 'month' && { backgroundColor: themeColors.primary }]}
+                    textStyle={[styles.filterChipText, dateFilter === 'month' && { color: '#fff' }]}
+                >
+                    Month
+                </Chip>
+            </View>
+
             {/* Transactions List */}
             <FlatList
                 data={groupedTransactions}
@@ -356,42 +393,6 @@ export default function TransactionsScreen() {
                     </View>
                 }
             />
-
-            {/* Filter Chips */}
-            <View style={styles.filterContainer}>
-                <Chip
-                    selected={dateFilter === 'all'}
-                    onPress={() => setDateFilter('all')}
-                    style={styles.filterChip}
-                    textStyle={styles.filterChipText}
-                >
-                    All
-                </Chip>
-                <Chip
-                    selected={dateFilter === 'today'}
-                    onPress={() => setDateFilter('today')}
-                    style={styles.filterChip}
-                    textStyle={styles.filterChipText}
-                >
-                    Today
-                </Chip>
-                <Chip
-                    selected={dateFilter === 'week'}
-                    onPress={() => setDateFilter('week')}
-                    style={styles.filterChip}
-                    textStyle={styles.filterChipText}
-                >
-                    Week
-                </Chip>
-                <Chip
-                    selected={dateFilter === 'month'}
-                    onPress={() => setDateFilter('month')}
-                    style={styles.filterChip}
-                    textStyle={styles.filterChipText}
-                >
-                    Month
-                </Chip>
-            </View>
 
             {/* FAB for adding transaction */}
             <Portal>
@@ -737,11 +738,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.sm,
         gap: Spacing.sm,
-        position: 'absolute',
-        top: 70,
-        left: 0,
-        right: 0,
-        zIndex: 10,
     },
     filterChip: {
         height: 32,

@@ -1,19 +1,28 @@
+import { AccountLimitCard, RecentTransactionItem, TotalKharchaCard } from '@/components/dashboard';
 import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
 import * as accountQueries from '@/db/queries/account';
 import * as settingQueries from '@/db/queries/setting';
 import * as transactionQueries from '@/db/queries/transaction';
-import { InsertTransaction, SelectAccount } from '@/db/schema';
+import { InsertTransaction, SelectAccount, SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, FAB, IconButton, Text } from 'react-native-paper';
+import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FAB, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scheduleNotification } from './services/notifications';
 import { readSms, requestSmsPermission } from './services/smsReader';
+
+interface AccountWithStats extends SelectAccount {
+  dailyTotal: number;
+  yesterdayTotal: number;
+  cumulativeTotal: number;
+  todayTransactions: SelectTransaction[];
+}
 
 export default function HomeScreen() {
   const expoDb = useSQLiteContext();
@@ -23,21 +32,34 @@ export default function HomeScreen() {
 
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const [accounts, setAccounts] = useState<(SelectAccount & { dailyTotal: number })[]>([]);
+  const [accounts, setAccounts] = useState<AccountWithStats[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Computed totals
+  const totalToday = accounts.reduce((sum, acc) => sum + acc.dailyTotal, 0);
+  const totalYesterday = accounts.reduce((sum, acc) => sum + acc.yesterdayTotal, 0);
+  const cumulativeTotal = accounts.reduce((sum, acc) => sum + acc.cumulativeTotal, 0);
+  const allTodayTransactions = accounts
+    .flatMap(acc => acc.todayTransactions)
+    .sort((a, b) => b.timestamp - a.timestamp);
 
 
   const loadData = async () => {
     try {
-      const accounts = await accountQueries.findAll({});
+      const fetchedAccounts = await accountQueries.findAll({});
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      const accountsWithTotal = await Promise.all(accounts.map(async (acc) => {
-        const total = await transactionQueries.getDailyTotal(acc.accountNo, acc.bankName, today);
-        return { ...acc, dailyTotal: total };
+      const accountsWithStats = await Promise.all(fetchedAccounts.map(async (acc) => {
+        const [dailyTotal, yesterdayTotal, cumulativeTotal, todayTransactions] = await Promise.all([
+          transactionQueries.getDailyTotal(acc.accountNo, acc.bankName, today),
+          transactionQueries.getYesterdayTotal(acc.accountNo, acc.bankName),
+          transactionQueries.getCumulativeTotal(acc.accountNo, acc.bankName),
+          transactionQueries.getTodayTransactions(acc.accountNo, acc.bankName),
+        ]);
+        return { ...acc, dailyTotal, yesterdayTotal, cumulativeTotal, todayTransactions };
       }));
 
-      setAccounts(accountsWithTotal);
+      setAccounts(accountsWithStats);
     } catch (e) {
       console.error(e);
     }
@@ -65,7 +87,6 @@ export default function HomeScreen() {
 
         let newTxCount = 0;
         const txs: InsertTransaction[] = [];
-        let maxTimestamp = lastTimestamp ?? 0;
 
         for (const tx of transactions) {
           txs.push({
@@ -79,22 +100,15 @@ export default function HomeScreen() {
             rawMessage: tx.rawMessage
           })
           newTxCount++;
-
-          // Track the latest timestamp even if message is not of transaction
-          const txTimestamp = tx.timestamp;
-          if (txTimestamp > maxTimestamp) {
-            maxTimestamp = txTimestamp;
-          }
         }
 
         if (txs.length > 0) {
           await transactionQueries.createMany(txs);
           console.log(`Added ${newTxCount} new transactions`);
-
-          // Update last SMS timestamp
-          await settingQueries.setLastSmsTimestamp(maxTimestamp + 1);
         }
 
+        // Update last SMS timestamp
+        await settingQueries.setLastSmsTimestamp(Date.now());
       } catch (e) {
         console.error(e);
       }
@@ -171,74 +185,82 @@ export default function HomeScreen() {
               />
             </View>
           ) : (
-            accounts.map((account) => {
-              const progress = account.upiLimit > 0 ? Math.min(account.dailyTotal / account.upiLimit, 1) : 0;
-              const isNearLimit = progress >= 0.9;
-              const isOverLimit = progress >= 1;
+            <>
+              {/* Total Kharcha Summary Card */}
+              <TotalKharchaCard
+                totalToday={totalToday}
+                totalYesterday={totalYesterday}
+                cumulativeTotal={cumulativeTotal}
+              />
 
-              let statusColor = themeColors.success;
-              let statusText = 'On Track';
+              {/* Account Limits Section */}
+              <View style={styles.sectionHeader}>
+                <Text variant="titleMedium" style={[styles.sectionTitle, { color: themeColors.text }]}>
+                  Daily Limits
+                </Text>
+              </View>
 
-              if (isOverLimit) {
-                statusColor = themeColors.error;
-                statusText = 'Limit Reached';
-              } else if (isNearLimit) {
-                statusColor = themeColors.warning;
-                statusText = 'Near Limit';
-              }
-
-              return (
-                <Card
+              {accounts.map((account) => (
+                <TouchableOpacity
                   key={account.id}
-                  style={[styles.card, { backgroundColor: themeColors.card, ...Elevation.md }]}
-                  onPress={() => router.push({ pathname: '/screens/TransactionsScreen', params: { accountId: account.id } })}
+                  onPress={() => router.push({ pathname: '/screens/TransactionsScreen', params: { accountId: account.id, bankName: account.bankName, accountNo: account.accountNo } })}
+                  activeOpacity={0.7}
                 >
-                  <Card.Content>
-                    <View style={styles.cardHeader}>
-                      <View style={styles.cardTitleContainer}>
-                        <Text variant="titleLarge" style={[styles.accountName, { color: themeColors.text }]}>
-                          {account.name}
-                        </Text>
-                        <Text variant="bodyMedium" style={[styles.bankName, { color: themeColors.icon }]}>
-                          {account.bankName}
-                        </Text>
-                      </View>
-                      <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-                        <Text variant="labelSmall" style={[styles.statusText, { color: statusColor }]}>
-                          {statusText}
-                        </Text>
-                      </View>
-                    </View>
+                  <AccountLimitCard
+                    name={account.name}
+                    bankName={account.bankName}
+                    dailyTotal={account.dailyTotal}
+                    yesterdayTotal={account.yesterdayTotal}
+                    upiLimit={account.upiLimit}
+                  />
+                </TouchableOpacity>
+              ))}
 
-                    <View style={styles.amountContainer}>
-                      <Text variant="headlineMedium" style={[styles.amount, { color: themeColors.text }]}>
-                        ₹{account.dailyTotal.toLocaleString('en-IN')}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: themeColors.icon }}>
-                        of ₹{account.upiLimit.toLocaleString('en-IN')}
-                      </Text>
-                    </View>
+              {/* Recent Transactions Section */}
+              <View style={styles.sectionHeader}>
+                <Text variant="titleMedium" style={[styles.sectionTitle, { color: themeColors.text }]}>
+                  {"Today's Transactions"}
+                </Text>
+                {allTodayTransactions.length > 0 && (
+                  <View style={[styles.countBadge, { backgroundColor: themeColors.primary + '20' }]}>
+                    <Text style={[styles.countText, { color: themeColors.primary }]}>
+                      {allTodayTransactions.length}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
-                    <View style={styles.progressContainer}>
-                      <View style={[styles.progressTrack, { backgroundColor: themeColors.progressBg }]}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            {
-                              width: `${progress * 100}%`,
-                              backgroundColor: statusColor,
-                            }
-                          ]}
-                        />
-                      </View>
-                      <Text variant="labelSmall" style={[styles.progressText, { color: themeColors.icon }]}>
-                        {(progress * 100).toFixed(0)}% used
-                      </Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-              );
-            })
+              {allTodayTransactions.length === 0 ? (
+                <View style={[styles.emptyTransactions, { backgroundColor: themeColors.card }]}>
+                  <MaterialIcons name="receipt-long" size={40} color={themeColors.icon} />
+                  <Text variant="bodyMedium" style={{ color: themeColors.icon, marginTop: Spacing.sm }}>
+                    No transactions today
+                  </Text>
+                </View>
+              ) : (
+                allTodayTransactions.slice(0, 5).map((tx) => (
+                  <RecentTransactionItem
+                    key={tx.id}
+                    transaction={tx}
+                    onPress={() => {
+                      const account = accounts.find(a => a.accountNo.includes(tx.accountNo) || tx.accountNo.includes(a.accountNo));
+                      if (account) {
+                        router.push({ pathname: '/screens/TransactionsScreen', params: { accountId: account.id, bankName: account.bankName, accountNo: account.accountNo } });
+                      }
+                    }}
+                  />
+                ))
+              )}
+
+              {allTodayTransactions.length > 5 && (
+                <TouchableOpacity style={[styles.viewAllButton, { borderColor: themeColors.primary }]}>
+                  <Text style={[styles.viewAllText, { color: themeColors.primary }]}>
+                    View All ({allTodayTransactions.length} transactions)
+                  </Text>
+                  <MaterialIcons name="chevron-right" size={20} color={themeColors.primary} />
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </ScrollView>
 
@@ -279,60 +301,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     fontSize: 13,
   },
-  card: {
-    marginBottom: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  cardTitleContainer: {
-    flex: 1,
-  },
-  accountName: {
-    fontWeight: '600',
-    marginBottom: Spacing.xs / 2,
-  },
-  bankName: {
-    opacity: 0.7,
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
-  statusText: {
-    fontWeight: '600',
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
-  amountContainer: {
-    marginBottom: Spacing.md,
-  },
-  amount: {
-    fontWeight: '700',
-    marginBottom: Spacing.xs / 2,
-  },
-  progressContainer: {
-    marginTop: Spacing.sm,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: BorderRadius.full,
-    overflow: 'hidden',
-    marginBottom: Spacing.xs,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: BorderRadius.full,
-  },
-  progressText: {
-    textAlign: 'right',
-  },
   emptyCard: {
     borderRadius: BorderRadius.lg,
     padding: Spacing.xl,
@@ -355,5 +323,44 @@ const styles = StyleSheet.create({
     margin: Spacing.md,
     right: 0,
     bottom: 0,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontWeight: '600',
+  },
+  countBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs / 2,
+    borderRadius: BorderRadius.full,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyTransactions: {
+    borderRadius: BorderRadius.md,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginTop: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  viewAllText: {
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
