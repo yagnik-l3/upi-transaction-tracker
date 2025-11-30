@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "97f77cb9-9b78-4d1b-9051-18147c70ec61",
+  "id": "2e62280f-b4e5-445e-a7fa-5fbd9631d9bc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "accounts": {
@@ -41,6 +41,22 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "cardColor": {
+          "name": "cardColor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'#6366f1'"
+        },
+        "cardIcon": {
+          "name": "cardIcon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'account-balance'"
         }
       },
       "indexes": {

@@ -1,9 +1,10 @@
 import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
-import { SelectBank } from '@/db/schema';
+import { CARD_COLORS, CARD_ICONS, SelectBank } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, IconButton, Menu, Text, TextInput } from 'react-native-paper';
 import * as accountQueries from '../../db/queries/account';
 import * as bankQueries from '../../db/queries/bank';
@@ -19,6 +20,8 @@ export default function SetupScreen() {
     const [accountNo, setAccountNo] = useState('');
     const [upiLimit, setUpiLimit] = useState('');
     const [menuVisible, setMenuVisible] = useState(false);
+    const [selectedColor, setSelectedColor] = useState(CARD_COLORS[0].value);
+    const [selectedIcon, setSelectedIcon] = useState(CARD_ICONS[0].value);
 
     useEffect(() => {
         loadBanks();
@@ -40,7 +43,9 @@ export default function SetupScreen() {
                 bankName: selectedBank.name,
                 name: friendlyName,
                 upiLimit: parseFloat(upiLimit),
-                accountNo: accountNo
+                accountNo: accountNo,
+                cardColor: selectedColor,
+                cardIcon: selectedIcon,
             });
 
             setFriendlyName('');
@@ -135,10 +140,57 @@ export default function SetupScreen() {
                         outlineColor={themeColors.cardBorder}
                         activeOutlineColor={themeColors.primary}
                     />
+
+                    {/* Card Color Selection */}
+                    <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
+                        Card Color
+                    </Text>
+                    <View style={styles.colorGrid}>
+                        {CARD_COLORS.map((color) => (
+                            <TouchableOpacity
+                                key={color.value}
+                                onPress={() => setSelectedColor(color.value)}
+                                style={[
+                                    styles.colorOption,
+                                    { backgroundColor: color.value },
+                                    selectedColor === color.value && styles.colorOptionSelected,
+                                ]}
+                            >
+                                {selectedColor === color.value && (
+                                    <MaterialIcons name="check" size={20} color="#fff" />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {/* Card Icon Selection */}
+                    <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
+                        Card Icon
+                    </Text>
+                    <View style={styles.iconGrid}>
+                        {CARD_ICONS.map((icon) => (
+                            <TouchableOpacity
+                                key={icon.value}
+                                onPress={() => setSelectedIcon(icon.value)}
+                                style={[
+                                    styles.iconOption,
+                                    { backgroundColor: themeColors.background },
+                                    selectedIcon === icon.value && { backgroundColor: selectedColor, borderColor: selectedColor },
+                                ]}
+                            >
+                                <MaterialIcons
+                                    name={icon.value as keyof typeof MaterialIcons.glyphMap}
+                                    size={24}
+                                    color={selectedIcon === icon.value ? '#fff' : themeColors.icon}
+                                />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
                     <Button
                         mode="contained"
                         onPress={handleAddAccount}
-                        style={[styles.button, { backgroundColor: themeColors.secondary }]}
+                        style={[styles.button, { backgroundColor: selectedColor }]}
                         disabled={banks.length === 0}
                         icon="check"
                     >
@@ -208,5 +260,42 @@ const styles = StyleSheet.create({
     },
     spacer: {
         height: Spacing.xl,
-    }
+    },
+    sectionLabel: {
+        fontWeight: '600',
+        marginBottom: Spacing.sm,
+        marginTop: Spacing.sm,
+    },
+    colorGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.sm,
+        marginBottom: Spacing.md,
+    },
+    colorOption: {
+        width: 44,
+        height: 44,
+        borderRadius: BorderRadius.full,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    colorOptionSelected: {
+        borderWidth: 3,
+        borderColor: '#fff',
+    },
+    iconGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.sm,
+        marginBottom: Spacing.md,
+    },
+    iconOption: {
+        width: 48,
+        height: 48,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
 });

@@ -11,6 +11,8 @@ interface AccountLimitCardProps {
     dailyTotal: number;
     yesterdayTotal: number;
     upiLimit: number;
+    cardColor?: string | null;
+    cardIcon?: string | null;
     onPress?: () => void;
 }
 
@@ -20,6 +22,8 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
     dailyTotal,
     yesterdayTotal,
     upiLimit,
+    cardColor,
+    cardIcon,
 }) => {
     const colorScheme = useColorScheme();
     const themeColors = Colors[colorScheme ?? 'light'];
@@ -46,8 +50,10 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
         ? Math.abs((difference / yesterdayTotal) * 100).toFixed(0)
         : dailyTotal > 0 ? '100' : '0';
 
+    const accentColor = cardColor || themeColors.primary;
+
     return (
-        <View style={[styles.card, { backgroundColor: themeColors.card, ...Elevation.md }]}>
+        <View style={[styles.card, { backgroundColor: themeColors.card, borderLeftColor: accentColor, ...Elevation.md }]}>
             <View style={styles.cardHeader}>
                 <View style={styles.cardTitleContainer}>
                     <Text variant="titleMedium" style={[styles.accountName, { color: themeColors.text }]}>
@@ -112,6 +118,7 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.lg,
         padding: Spacing.md,
         marginBottom: Spacing.sm,
+        borderLeftWidth: 4,
     },
     cardHeader: {
         flexDirection: 'row',

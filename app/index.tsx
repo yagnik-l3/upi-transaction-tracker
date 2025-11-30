@@ -20,7 +20,6 @@ import { readSms, requestSmsPermission } from './services/smsReader';
 interface AccountWithStats extends SelectAccount {
   dailyTotal: number;
   yesterdayTotal: number;
-  cumulativeTotal: number;
   todayTransactions: SelectTransaction[];
 }
 
@@ -34,11 +33,12 @@ export default function HomeScreen() {
   const router = useRouter();
   const [accounts, setAccounts] = useState<AccountWithStats[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
+  const [hasAutoRefreshed, setHasAutoRefreshed] = useState(false);
 
   // Computed totals
   const totalToday = accounts.reduce((sum, acc) => sum + acc.dailyTotal, 0);
   const totalYesterday = accounts.reduce((sum, acc) => sum + acc.yesterdayTotal, 0);
-  const cumulativeTotal = accounts.reduce((sum, acc) => sum + acc.cumulativeTotal, 0);
   const allTodayTransactions = accounts
     .flatMap(acc => acc.todayTransactions)
     .sort((a, b) => b.timestamp - a.timestamp);
@@ -50,26 +50,23 @@ export default function HomeScreen() {
       const today = format(new Date(), 'yyyy-MM-dd');
 
       const accountsWithStats = await Promise.all(fetchedAccounts.map(async (acc) => {
-        const [dailyTotal, yesterdayTotal, cumulativeTotal, todayTransactions] = await Promise.all([
+        const [dailyTotal, yesterdayTotal, todayTransactions] = await Promise.all([
           transactionQueries.getDailyTotal(acc.accountNo, acc.bankName, today),
           transactionQueries.getYesterdayTotal(acc.accountNo, acc.bankName),
-          transactionQueries.getCumulativeTotal(acc.accountNo, acc.bankName),
           transactionQueries.getTodayTransactions(acc.accountNo, acc.bankName),
         ]);
-        return { ...acc, dailyTotal, yesterdayTotal, cumulativeTotal, todayTransactions };
+        return { ...acc, dailyTotal, yesterdayTotal, todayTransactions };
       }));
+
+      // Load last refresh time
+      const savedRefreshTime = await settingQueries.getLastRefreshTime();
+      setLastRefreshTime(savedRefreshTime);
 
       setAccounts(accountsWithStats);
     } catch (e) {
       console.error(e);
     }
   };
-
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -114,6 +111,11 @@ export default function HomeScreen() {
       }
     }
 
+    // Update last refresh time
+    const now = Date.now();
+    await settingQueries.setLastRefreshTime(now);
+    setLastRefreshTime(now);
+
     await loadData();
 
     const updatedAccounts = await accountQueries.findAll({});
@@ -136,6 +138,18 @@ export default function HomeScreen() {
 
     setRefreshing(false);
   };
+
+  // Load data on screen focus and auto-refresh on first mount
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasAutoRefreshed) {
+        setHasAutoRefreshed(true);
+        onRefresh();
+      } else {
+        loadData();
+      }
+    }, [hasAutoRefreshed])
+  );
 
   const themeColors = Colors[colorScheme ?? 'light'];
 
@@ -190,7 +204,7 @@ export default function HomeScreen() {
               <TotalKharchaCard
                 totalToday={totalToday}
                 totalYesterday={totalYesterday}
-                cumulativeTotal={cumulativeTotal}
+                lastRefreshTime={lastRefreshTime}
               />
 
               {/* Account Limits Section */}
@@ -212,6 +226,8 @@ export default function HomeScreen() {
                     dailyTotal={account.dailyTotal}
                     yesterdayTotal={account.yesterdayTotal}
                     upiLimit={account.upiLimit}
+                    cardColor={account.cardColor}
+                    cardIcon={account.cardIcon}
                   />
                 </TouchableOpacity>
               ))}

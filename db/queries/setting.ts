@@ -35,3 +35,12 @@ export async function getLastSmsTimestamp(): Promise<number> {
 export async function setLastSmsTimestamp(timestamp: number) {
     return set('lastSmsTimestamp', timestamp.toString());
 }
+
+export async function getLastRefreshTime(): Promise<number | null> {
+    const setting = await get('lastRefreshTime');
+    return setting ? parseInt(setting.value) : null;
+}
+
+export async function setLastRefreshTime(timestamp: number) {
+    return set('lastRefreshTime', timestamp.toString());
+}

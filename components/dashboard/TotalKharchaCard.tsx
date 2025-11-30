@@ -8,7 +8,7 @@ import { Text } from 'react-native-paper';
 interface TotalKharchaCardProps {
     totalToday: number;
     totalYesterday: number;
-    cumulativeTotal: number;
+    lastRefreshTime: number | null;
 }
 
 const formatAmount = (amount: number): string => {
@@ -20,10 +20,24 @@ const formatAmount = (amount: number): string => {
     return `₹${amount.toLocaleString('en-IN')}`;
 };
 
+const formatRelativeTime = (timestamp: number | null): string => {
+    if (!timestamp) return 'Never';
+
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return new Date(timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+};
+
 export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
     totalToday,
     totalYesterday,
-    cumulativeTotal,
+    lastRefreshTime,
 }) => {
     const colorScheme = useColorScheme();
     const themeColors = Colors[colorScheme ?? 'light'];
@@ -64,14 +78,13 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
 
             <View style={styles.divider} />
 
-            <View style={styles.cumulativeRow}>
-                <View style={styles.cumulativeIcon}>
-                    <MaterialIcons name="account-balance-wallet" size={20} color="#fff" />
+            <View style={styles.refreshRow}>
+                <View style={styles.refreshIcon}>
+                    <MaterialIcons name="sync" size={16} color="rgba(255, 255, 255, 0.7)" />
                 </View>
-                <View style={styles.cumulativeInfo}>
-                    <Text style={styles.cumulativeLabel}>Total Cumulative Spending</Text>
-                    <Text style={styles.cumulativeAmount}>{formatAmount(cumulativeTotal)}</Text>
-                </View>
+                <Text style={styles.refreshText}>
+                    Last updated: {formatRelativeTime(lastRefreshTime)}
+                </Text>
             </View>
         </View>
     );
@@ -127,29 +140,16 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         marginVertical: Spacing.md,
     },
-    cumulativeRow: {
+    refreshRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing.md,
+        gap: Spacing.sm,
     },
-    cumulativeIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.full,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
+    refreshIcon: {
+        opacity: 0.7,
     },
-    cumulativeInfo: {
-        flex: 1,
-    },
-    cumulativeLabel: {
+    refreshText: {
         color: 'rgba(255, 255, 255, 0.7)',
         fontSize: 12,
-    },
-    cumulativeAmount: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '700',
     },
 });

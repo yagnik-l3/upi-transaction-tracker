@@ -36,6 +36,15 @@ export default function RootLayout() {
     requestPermissions();
   }, []);
 
+  // Show loading while migrations are running
+  if (!success) {
+    return <ActivityIndicator size="large" style={{ flex: 1, justifyContent: 'center' }} />;
+  }
+
+  if (error) {
+    console.error('Migration error:', error);
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Suspense fallback={<ActivityIndicator size="large" />}>
