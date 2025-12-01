@@ -74,7 +74,7 @@ export default function HomeScreen() {
     if (hasSmsPermission) {
       try {
         // Get last SMS timestamp
-        const lastTimestamp = await settingQueries.getLastSmsTimestamp();
+        const lastTimestamp = await settingQueries.getLastRefreshTime();
 
         // Read only new SMS messages
         const transactions = await readSms(lastTimestamp);
@@ -102,16 +102,11 @@ export default function HomeScreen() {
         }
 
         // Update last SMS timestamp
-        await settingQueries.setLastSmsTimestamp(Date.now());
+        await settingQueries.setLastRefreshTime(Date.now());
       } catch (e) {
         console.error(e);
       }
     }
-
-    // Update last refresh time
-    const now = Date.now();
-    await settingQueries.setLastRefreshTime(now);
-    setLastRefreshTime(now);
 
     await loadData();
 
@@ -136,7 +131,7 @@ export default function HomeScreen() {
 
   // Load data on mount
   useEffect(() => {
-    loadData();
+    handleRefresh();
   }, []);
 
   // Handle refresh with SMS reading

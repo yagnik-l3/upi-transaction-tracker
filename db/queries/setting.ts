@@ -27,18 +27,9 @@ export async function set(key: string, value: string) {
     }
 }
 
-export async function getLastSmsTimestamp(): Promise<number> {
-    const setting = await get('lastSmsTimestamp');
-    return setting ? parseInt(setting.value) : 0;
-}
-
-export async function setLastSmsTimestamp(timestamp: number) {
-    return set('lastSmsTimestamp', timestamp.toString());
-}
-
-export async function getLastRefreshTime(): Promise<number | null> {
+export async function getLastRefreshTime(): Promise<number> {
     const setting = await get('lastRefreshTime');
-    return setting ? parseInt(setting.value) : null;
+    return setting ? parseInt(setting.value) : 0;
 }
 
 export async function setLastRefreshTime(timestamp: number) {
