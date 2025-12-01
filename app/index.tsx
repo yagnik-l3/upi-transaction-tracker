@@ -3,14 +3,14 @@ import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constant
 import * as accountQueries from '@/db/queries/account';
 import * as settingQueries from '@/db/queries/setting';
 import * as transactionQueries from '@/db/queries/transaction';
-import { InsertTransaction, SelectAccount, SelectTransaction } from '@/db/schema';
+import { CARD_COLORS, CARD_ICONS, InsertAccount, InsertTransaction, SelectAccount, SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { FAB, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -70,7 +70,6 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     // Request permissions first
     const hasSmsPermission = await requestSmsPermission();
-
     if (hasSmsPermission) {
       try {
         // Get last SMS timestamp
@@ -79,26 +78,62 @@ export default function HomeScreen() {
         // Read only new SMS messages
         const transactions = await readSms(lastTimestamp);
 
-        let newTxCount = 0;
-        const txs: InsertTransaction[] = [];
+        if (transactions.length > 0) {
+          // Collect unique bank+account combinations from transactions
+          const uniqueAccounts = new Map<string, { bankName: string; accountNo: string }>();
+          const txs: InsertTransaction[] = [];
 
-        for (const tx of transactions) {
-          txs.push({
-            bankName: tx.bankName,
-            accountNo: tx.accountNo,
-            amount: tx.amount,
-            receiver: tx.receiver,
-            reference: tx.reference,
-            date: tx.date,
-            timestamp: tx.timestamp,
-            rawMessage: tx.rawMessage
-          })
-          newTxCount++;
-        }
+          for (const tx of transactions) {
+            const key = `${tx.bankName}:${tx.accountNo}`;
+            if (!uniqueAccounts.has(key)) {
+              uniqueAccounts.set(key, { bankName: tx.bankName, accountNo: tx.accountNo });
+            }
+            txs.push({
+              bankName: tx.bankName,
+              accountNo: tx.accountNo,
+              amount: tx.amount,
+              receiver: tx.receiver,
+              reference: tx.reference,
+              date: tx.date,
+              timestamp: tx.timestamp,
+              rawMessage: tx.rawMessage
+            });
+          }
 
-        if (txs.length > 0) {
+          // Get existing accounts in one query
+          const existingAccounts = await accountQueries.findAll({});
+          const existingKeys = new Set(
+            existingAccounts.map(acc => `${acc.bankName}:${acc.accountNo}`)
+          );
+
+          // Create new accounts for bank+accountNo combinations that don't exist
+          const newAccounts: InsertAccount[] = [];
+          let colorIndex = existingAccounts.length;
+
+          for (const [key, accInfo] of uniqueAccounts) {
+            if (!existingKeys.has(key)) {
+              // Auto-create account with default values
+              newAccounts.push({
+                bankName: accInfo.bankName,
+                accountNo: accInfo.accountNo,
+                name: `${accInfo.bankName} ****${accInfo.accountNo.slice(-4)}`,
+                upiLimit: 100000, // Default limit
+                cardColor: CARD_COLORS[colorIndex % CARD_COLORS.length].value,
+                cardIcon: CARD_ICONS[0].value,
+              });
+              colorIndex++;
+            }
+          }
+
+          // Batch create new accounts
+          if (newAccounts.length > 0) {
+            await accountQueries.createMany(newAccounts);
+            console.log(`Auto-created ${newAccounts.length} new accounts`);
+          }
+
+          // Batch create transactions
           await transactionQueries.createMany(txs);
-          console.log(`Added ${newTxCount} new transactions`);
+          console.log(`Added ${txs.length} new transactions`);
         }
 
         // Update last SMS timestamp
@@ -129,17 +164,24 @@ export default function HomeScreen() {
     }
   };
 
-  // Load data on mount
-  useEffect(() => {
-    handleRefresh();
+  // Handle refresh with SMS reading
+  const handleRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      await onRefresh();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
-  // Handle refresh with SMS reading
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await onRefresh();
-    setRefreshing(false);
-  };
+  // Load data on mount and when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      handleRefresh();
+    }, [handleRefresh])
+  );
 
   const themeColors = Colors[colorScheme ?? 'light'];
 
@@ -154,27 +196,20 @@ export default function HomeScreen() {
         >
           <View style={styles.headerContainer}>
             <View style={styles.headerRow}>
+              <View style={styles.headerTextContainer}>
+                <Text variant="headlineMedium" style={[styles.header, { color: themeColors.text }]}>
+                  My Accounts
+                </Text>
+                <Text variant="bodySmall" style={[styles.subtitle, { color: themeColors.icon }]}>
+                  {format(new Date(), 'EEEE, MMMM d')}
+                </Text>
+              </View>
               <View style={styles.logoContainer}>
                 <Image
                   source={require('../assets/images/icon.png')}
                   style={styles.appIcon}
                 />
               </View>
-              <View style={styles.headerTextContainer}>
-                <Text variant="headlineMedium" style={[styles.header, { color: themeColors.text }]}>
-                  My Accounts
-                </Text>
-                <Text variant="bodySmall" style={[styles.subtitle, { color: themeColors.icon }]}>
-                  {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleRefresh}
-                disabled={refreshing}
-                style={[styles.refreshButton, { backgroundColor: themeColors.card }]}
-              >
-                <MaterialIcons name="refresh" size={22} color="#1f2937" />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -225,6 +260,7 @@ export default function HomeScreen() {
                     upiLimit={account.upiLimit}
                     cardColor={account.cardColor}
                     cardIcon={account.cardIcon}
+                    onEdit={() => router.push({ pathname: '/screens/EditAccountScreen', params: { accountId: account.id } })}
                   />
                 </TouchableOpacity>
               ))}

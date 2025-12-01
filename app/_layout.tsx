@@ -116,6 +116,7 @@ export default function RootLayout() {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="screens/SetupScreen" />
                 <Stack.Screen name="screens/TransactionsScreen" />
+                <Stack.Screen name="screens/EditAccountScreen" />
               </Stack>
               <StatusBar style="dark" />
             </ThemeProvider>

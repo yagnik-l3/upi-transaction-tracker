@@ -1,6 +1,7 @@
 import { BorderRadius, Colors, FontFamily, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
+import { format } from 'date-fns';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -81,7 +82,8 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
             <View style={styles.refreshRow}>
                 <MaterialIcons name="schedule" size={14} color="rgba(255, 255, 255, 0.5)" />
                 <Text style={styles.refreshText}>
-                    Last updated: {formatRelativeTime(lastRefreshTime)}
+                    {/* Last updated: {formatRelativeTime(lastRefreshTime)} */}
+                    Last updated: {format(lastRefreshTime ?? Date.now(), 'yyyy-MM-dd hh:mm:ss a')}
                 </Text>
             </View>
         </View>

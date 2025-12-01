@@ -2,7 +2,7 @@ import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constant
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 interface AccountLimitCardProps {
@@ -14,6 +14,7 @@ interface AccountLimitCardProps {
     cardColor?: string | null;
     cardIcon?: string | null;
     onPress?: () => void;
+    onEdit?: () => void;
 }
 
 export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
@@ -24,6 +25,7 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
     upiLimit,
     cardColor,
     cardIcon,
+    onEdit,
 }) => {
     const colorScheme = useColorScheme();
     const themeColors = Colors[colorScheme ?? 'light'];
@@ -73,6 +75,14 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
                         {statusText}
                     </Text>
                 </View>
+                {onEdit && (
+                    <TouchableOpacity
+                        onPress={onEdit}
+                        style={[styles.editButton, { backgroundColor: themeColors.background }]}
+                    >
+                        <MaterialIcons name="edit" size={16} color={themeColors.icon} />
+                    </TouchableOpacity>
+                )}
             </View>
 
             <View style={styles.amountRow}>
@@ -158,6 +168,14 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 10,
         textTransform: 'uppercase',
+    },
+    editButton: {
+        width: 32,
+        height: 32,
+        borderRadius: BorderRadius.sm,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: Spacing.xs,
     },
     amountRow: {
         flexDirection: 'row',
