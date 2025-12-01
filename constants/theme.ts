@@ -90,6 +90,16 @@ export const Elevation = {
   },
 };
 
+export const FontFamily = {
+  regular: 'OpenSans-Regular',
+  medium: 'OpenSans-Medium',
+  semiBold: 'OpenSans-SemiBold',
+  bold: 'OpenSans-Bold',
+  extraBold: 'OpenSans-ExtraBold',
+  light: 'OpenSans-Light',
+  italic: 'OpenSans-Italic',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

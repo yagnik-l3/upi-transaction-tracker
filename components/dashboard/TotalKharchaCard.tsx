@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontFamily, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
@@ -43,16 +43,16 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
     const themeColors = Colors[colorScheme ?? 'light'];
 
     const difference = totalToday - totalYesterday;
-    const isLower = difference < 0;
+    const isLower = difference <= 0;
     const percentChange = totalYesterday > 0
         ? Math.abs((difference / totalYesterday) * 100).toFixed(0)
         : totalToday > 0 ? '100' : '0';
 
     return (
-        <View style={[styles.card, { backgroundColor: themeColors.primary }]}>
+        <View style={[styles.card, { backgroundColor: themeColors.text }]}>
             <View style={styles.header}>
                 <Text variant="titleMedium" style={styles.title}>
-                    {"Today's"} <Text style={styles.titleBold}>Kharcha</Text>
+                    {"Today's"} <Text style={styles.titleBold}>Spendings</Text>
                 </Text>
             </View>
 
@@ -60,13 +60,13 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
                 <Text variant="displaySmall" style={styles.amount}>
                     {formatAmount(totalToday)}
                 </Text>
-                <View style={[styles.trendBadge, { backgroundColor: isLower ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }]}>
+                <View style={[styles.trendBadge, { backgroundColor: isLower ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
                     <MaterialIcons
-                        name={isLower ? 'arrow-downward' : 'arrow-upward'}
-                        size={18}
-                        color={isLower ? '#10b981' : '#ef4444'}
+                        name={isLower ? 'trending-down' : 'trending-up'}
+                        size={16}
+                        color={isLower ? themeColors.success : themeColors.error}
                     />
-                    <Text style={[styles.trendText, { color: isLower ? '#10b981' : '#ef4444' }]}>
+                    <Text style={[styles.trendText, { color: isLower ? themeColors.success : themeColors.error }]}>
                         {percentChange}%
                     </Text>
                 </View>
@@ -79,9 +79,7 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
             <View style={styles.divider} />
 
             <View style={styles.refreshRow}>
-                <View style={styles.refreshIcon}>
-                    <MaterialIcons name="sync" size={16} color="rgba(255, 255, 255, 0.7)" />
-                </View>
+                <MaterialIcons name="schedule" size={14} color="rgba(255, 255, 255, 0.5)" />
                 <Text style={styles.refreshText}>
                     Last updated: {formatRelativeTime(lastRefreshTime)}
                 </Text>
@@ -92,21 +90,22 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: BorderRadius.xl,
+        borderRadius: BorderRadius.lg,
         padding: Spacing.lg,
         marginBottom: Spacing.md,
-        ...Elevation.lg,
     },
     header: {
-        marginBottom: Spacing.sm,
+        marginBottom: Spacing.xs,
     },
     title: {
-        color: 'rgba(255, 255, 255, 0.8)',
+        color: 'rgba(255, 255, 255, 0.6)',
         fontWeight: '400',
+        fontSize: 14,
     },
     titleBold: {
         fontWeight: '700',
-        color: '#fff',
+        fontFamily: FontFamily.bold,
+        color: 'rgba(255, 255, 255, 0.6)',
     },
     amountContainer: {
         flexDirection: 'row',
@@ -117,6 +116,8 @@ const styles = StyleSheet.create({
     amount: {
         color: '#fff',
         fontWeight: '700',
+        fontFamily: FontFamily.extraBold,
+        fontSize: 36,
     },
     trendBadge: {
         flexDirection: 'row',
@@ -124,32 +125,30 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.sm,
         paddingVertical: Spacing.xs,
         borderRadius: BorderRadius.full,
-        gap: 4,
+        gap: 2,
     },
     trendText: {
-        fontSize: 14,
-        fontWeight: '700',
+        fontSize: 13,
+        fontWeight: '600',
+        fontFamily: FontFamily.semiBold,
     },
     comparisonText: {
-        color: 'rgba(255, 255, 255, 0.7)',
+        color: 'rgba(255, 255, 255, 0.5)',
         fontSize: 13,
         marginBottom: Spacing.md,
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        marginVertical: Spacing.md,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        marginVertical: Spacing.sm,
     },
     refreshRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    refreshIcon: {
-        opacity: 0.7,
+        gap: Spacing.xs,
     },
     refreshText: {
-        color: 'rgba(255, 255, 255, 0.7)',
+        color: 'rgba(255, 255, 255, 0.5)',
         fontSize: 12,
     },
 });

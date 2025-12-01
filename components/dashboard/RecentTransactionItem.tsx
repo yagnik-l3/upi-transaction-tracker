@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontFamily, Spacing } from '@/constants/theme';
 import { SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -109,6 +109,7 @@ const styles = StyleSheet.create({
     },
     receiver: {
         fontWeight: '600',
+        fontFamily: FontFamily.semiBold,
         marginBottom: 2,
     },
     time: {
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
     },
     amount: {
         fontWeight: '700',
+        fontFamily: FontFamily.bold,
     },
     categoryBadge: {
         paddingHorizontal: Spacing.sm,

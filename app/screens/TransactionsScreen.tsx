@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontFamily, Spacing } from '@/constants/theme';
 import * as transactionQueries from '@/db/queries/transaction';
 import { InsertTransaction, SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -6,10 +6,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { endOfDay, format, isToday, isYesterday, startOfDay, subDays } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, FlatList, LayoutAnimation, Platform, StyleSheet, TextInput, TouchableOpacity, UIManager, View } from 'react-native';
-import { Chip, FAB, Portal, Searchbar, Text } from 'react-native-paper';
+import { Animated, FlatList, LayoutAnimation, Platform, TextInput as RNTextInput, StyleSheet, TouchableOpacity, UIManager, View } from 'react-native';
+import { Chip, FAB, Portal, Text, TextInput } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -23,11 +24,10 @@ interface GroupedTransactions {
 }
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
-type CategoryFilter = 'all' | 'Food & Dining' | 'Personal Care & Beauty' | 'Miscellaneous';
 
 export default function TransactionsScreen() {
     const colorScheme = useColorScheme();
-    const navigation = useNavigation();
+    const router = useRouter();
     const { accountNo, bankName } = useLocalSearchParams();
 
     const [transactions, setTransactions] = useState<SelectTransaction[]>([]);
@@ -35,7 +35,6 @@ export default function TransactionsScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTransaction, setSelectedTransaction] = useState<SelectTransaction | null>(null);
     const [dateFilter, setDateFilter] = useState<FilterType>('all');
-    const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
     // Bottom sheet refs
     const detailSheetRef = useRef<BottomSheet>(null);
@@ -52,20 +51,6 @@ export default function TransactionsScreen() {
         reference: '',
         category: 'Miscellaneous',
     });
-
-    // Set header with account number
-    useEffect(() => {
-        if (accountNo) {
-            const lastFour = String(accountNo).slice(-4);
-            navigation.setOptions({
-                title: `Transactions \u2022 ****${lastFour}`,
-                headerTitleStyle: {
-                    fontSize: 16,
-                    fontWeight: '600',
-                },
-            });
-        }
-    }, [accountNo, navigation]);
 
     useEffect(() => {
         loadTransactions();
@@ -90,7 +75,7 @@ export default function TransactionsScreen() {
 
     useEffect(() => {
         applyFilters();
-    }, [transactions, searchQuery, dateFilter, categoryFilter]);
+    }, [transactions, searchQuery, dateFilter]);
 
     const loadTransactions = async () => {
         const txs = await transactionQueries.findAll({
@@ -127,11 +112,6 @@ export default function TransactionsScreen() {
         } else if (dateFilter === 'month') {
             const monthStart = subDays(now, 30).getTime();
             filtered = filtered.filter(t => t.timestamp >= monthStart);
-        }
-
-        // Category filter
-        if (categoryFilter !== 'all') {
-            filtered = filtered.filter(t => getCategoryFromReceiver(t.receiver) === categoryFilter);
         }
 
         setFilteredTransactions(filtered);
@@ -190,13 +170,23 @@ export default function TransactionsScreen() {
         }
     };
 
-    const handleTransactionPress = useCallback((transaction: SelectTransaction) => {
+    const handleTransactionPress = (transaction: SelectTransaction) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setTimeout(() => {
+            detailSheetRef.current?.expand();
+        }, 50);
         setSelectedTransaction(transaction);
-        detailSheetRef.current?.expand();
-    }, []);
+    };
 
-    const handleAddTransaction = useCallback(async () => {
+    // Calculate stats based on filtered transactions
+    const stats = useMemo(() => {
+        const totalSpent = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+        const avgTransaction = filteredTransactions.length > 0 ? totalSpent / filteredTransactions.length : 0;
+        const maxTransaction = filteredTransactions.length > 0 ? Math.max(...filteredTransactions.map(tx => tx.amount)) : 0;
+        return { totalSpent, avgTransaction, maxTransaction, count: filteredTransactions.length };
+    }, [filteredTransactions]);
+
+    const handleAddTransaction = async () => {
         if (!newTransaction.amount || !newTransaction.receiver) {
             Toast.show({
                 type: 'error',
@@ -250,8 +240,13 @@ export default function TransactionsScreen() {
                 position: 'bottom',
             });
         }
-    }, [newTransaction, bankName, accountNo]);
+    };
 
+    const handleAddSheetChange = (index: number) => {
+        if (index === -1) {
+            addSheetRef.current?.close();
+        }
+    };
     const renderBackdrop = useCallback(
         (props: any) => (
             <BottomSheetBackdrop
@@ -328,241 +323,331 @@ export default function TransactionsScreen() {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-            {/* Header with Search */}
-            <View style={[styles.header, { backgroundColor: themeColors.background }]}>
-                <Searchbar
-                    placeholder="Search here..."
-                    onChangeText={onChangeSearch}
-                    value={searchQuery}
-                    style={[styles.searchBar, { backgroundColor: themeColors.card }]}
-                    iconColor={themeColors.primary}
-                    inputStyle={{ color: themeColors.text }}
-                    elevation={0}
-                />
-            </View>
-
-            {/* Filter Chips */}
-            <View style={styles.filterContainer}>
-                <Chip
-                    selected={dateFilter === 'all'}
-                    onPress={() => setDateFilter('all')}
-                    style={[styles.filterChip, dateFilter === 'all' && { backgroundColor: themeColors.primary }]}
-                    textStyle={[styles.filterChipText, dateFilter === 'all' && { color: '#fff' }]}
-                >
-                    All
-                </Chip>
-                <Chip
-                    selected={dateFilter === 'today'}
-                    onPress={() => setDateFilter('today')}
-                    style={[styles.filterChip, dateFilter === 'today' && { backgroundColor: themeColors.primary }]}
-                    textStyle={[styles.filterChipText, dateFilter === 'today' && { color: '#fff' }]}
-                >
-                    Today
-                </Chip>
-                <Chip
-                    selected={dateFilter === 'week'}
-                    onPress={() => setDateFilter('week')}
-                    style={[styles.filterChip, dateFilter === 'week' && { backgroundColor: themeColors.primary }]}
-                    textStyle={[styles.filterChipText, dateFilter === 'week' && { color: '#fff' }]}
-                >
-                    Week
-                </Chip>
-                <Chip
-                    selected={dateFilter === 'month'}
-                    onPress={() => setDateFilter('month')}
-                    style={[styles.filterChip, dateFilter === 'month' && { backgroundColor: themeColors.primary }]}
-                    textStyle={[styles.filterChipText, dateFilter === 'month' && { color: '#fff' }]}
-                >
-                    Month
-                </Chip>
-            </View>
-
-            {/* Transactions List */}
-            <FlatList
-                data={groupedTransactions}
-                keyExtractor={(item) => item.date}
-                renderItem={renderGroup}
-                contentContainerStyle={styles.listContent}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <MaterialIcons name="receipt-long" size={64} color={themeColors.icon} />
-                        <Text variant="bodyLarge" style={[styles.emptyText, { color: themeColors.icon }]}>
-                            No transactions found
-                        </Text>
-                    </View>
-                }
-            />
-
-            {/* FAB for adding transaction */}
-            <Portal>
-                <FAB
-                    icon="plus"
-                    style={[styles.fab, { backgroundColor: themeColors.primary }]}
-                    onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        addSheetRef.current?.expand();
-                    }}
-                    color="#fff"
-                />
-            </Portal>
-
-            {/* Transaction Detail Bottom Sheet */}
-            <BottomSheet
-                ref={detailSheetRef}
-                index={-1}
-                snapPoints={['75%']}
-                enablePanDownToClose
-                backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: themeColors.card }}
-            >
-                <View style={styles.sheetHeader}>
-                    <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
-                        Transaction Details
-                    </Text>
-                    <TouchableOpacity onPress={() => detailSheetRef.current?.close()}>
-                        <MaterialIcons name="close" size={24} color={themeColors.icon} />
-                    </TouchableOpacity>
-                </View>
-
-                {selectedTransaction && (
-                    <BottomSheetScrollView style={styles.sheetBody}>
-                        <View style={styles.detailRow}>
-                            <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Receiver</Text>
-                            <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                {selectedTransaction.receiver}
-                            </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Amount</Text>
-                            <Text style={[styles.detailValue, { color: themeColors.error }]}>
-                                ₹{selectedTransaction.amount}
-                            </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Reference</Text>
-                            <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                {selectedTransaction.reference}
-                            </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Date & Time</Text>
-                            <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                {format(new Date(selectedTransaction.timestamp), 'dd MMM yyyy, hh:mm a')}
-                            </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Bank</Text>
-                            <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                {selectedTransaction.bankName}
-                            </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Account</Text>
-                            <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                {selectedTransaction.accountNo}
-                            </Text>
-                        </View>
-                        <View style={[styles.rawMessageContainer, { backgroundColor: themeColors.background }]}>
-                            <Text style={[styles.rawMessageLabel, { color: themeColors.icon }]}>
-                                Raw Message
-                            </Text>
-                            <Text style={[styles.rawMessageText, { color: themeColors.text }]}>
-                                {selectedTransaction.rawMessage}
-                            </Text>
-                        </View>
-                    </BottomSheetScrollView>
-                )}
-            </BottomSheet>
-
-            {/* Add Transaction Bottom Sheet */}
-            <BottomSheet
-                ref={addSheetRef}
-                index={-1}
-                snapPoints={['65%']}
-                enablePanDownToClose
-                backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: themeColors.card }}
-            >
-                <View style={styles.sheetHeader}>
-                    <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
-                        Add Transaction
-                    </Text>
-                    <TouchableOpacity onPress={() => addSheetRef.current?.close()}>
-                        <MaterialIcons name="close" size={24} color={themeColors.icon} />
-                    </TouchableOpacity>
-                </View>
-
-                <BottomSheetScrollView style={styles.sheetBody}>
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.inputLabel, { color: themeColors.icon }]}>Receiver Name</Text>
-                        <TextInput
-                            style={[styles.input, {
-                                backgroundColor: themeColors.background,
-                                color: themeColors.text,
-                                borderColor: themeColors.cardBorder
-                            }]}
-                            placeholder="Enter receiver name"
-                            placeholderTextColor={themeColors.icon}
-                            value={newTransaction.receiver}
-                            onChangeText={(text) => setNewTransaction({ ...newTransaction, receiver: text })}
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.inputLabel, { color: themeColors.icon }]}>Amount</Text>
-                        <TextInput
-                            style={[styles.input, {
-                                backgroundColor: themeColors.background,
-                                color: themeColors.text,
-                                borderColor: themeColors.cardBorder
-                            }]}
-                            placeholder="Enter amount"
-                            placeholderTextColor={themeColors.icon}
-                            keyboardType="decimal-pad"
-                            value={newTransaction.amount}
-                            onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.inputLabel, { color: themeColors.icon }]}>Reference (Optional)</Text>
-                        <TextInput
-                            style={[styles.input, {
-                                backgroundColor: themeColors.background,
-                                color: themeColors.text,
-                                borderColor: themeColors.cardBorder
-                            }]}
-                            placeholder="Enter reference"
-                            placeholderTextColor={themeColors.icon}
-                            value={newTransaction.reference}
-                            onChangeText={(text) => setNewTransaction({ ...newTransaction, reference: text })}
-                        />
-                    </View>
-
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+            <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+                {/* Custom Header with Back Button and Search */}
+                <View style={styles.customHeader}>
                     <TouchableOpacity
-                        style={[styles.addButton, { backgroundColor: themeColors.primary }]}
-                        onPress={handleAddTransaction}
+                        onPress={() => router.back()}
+                        style={[styles.backButton, { backgroundColor: themeColors.card }]}
                     >
-                        <Text style={styles.addButtonText}>Add Transaction</Text>
+                        <MaterialIcons name="arrow-back" size={22} color="#1f2937" />
                     </TouchableOpacity>
-                </BottomSheetScrollView>
-            </BottomSheet>
-        </View>
+                    <View style={[styles.searchContainer, { backgroundColor: themeColors.card }]}>
+                        <MaterialIcons name="search" size={18} color={themeColors.icon} />
+                        <RNTextInput
+                            placeholder="Search transactions..."
+                            placeholderTextColor={themeColors.icon}
+                            onChangeText={onChangeSearch}
+                            value={searchQuery}
+                            style={[styles.searchInput, { color: themeColors.text }]}
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <MaterialIcons name="close" size={16} color={themeColors.icon} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+
+                {/* Stats Card */}
+                <View style={[styles.statsCard, { backgroundColor: themeColors.text }]}>
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: themeColors.background }]}>
+                            ₹{stats.totalSpent.toLocaleString('en-IN')}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.6)' }]}>Total Spent</Text>
+                    </View>
+                    <View style={[styles.statDivider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: themeColors.background }]}>
+                            {stats.count}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.6)' }]}>Transactions</Text>
+                    </View>
+                    <View style={[styles.statDivider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: themeColors.background }]}>
+                            ₹{stats.avgTransaction.toFixed(0)}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.6)' }]}>Average</Text>
+                    </View>
+                </View>
+
+                {/* Filter Chips */}
+                <View style={styles.filterContainer}>
+                    <Chip
+                        mode='flat'
+                        selected={dateFilter === 'all'}
+                        onPress={() => setDateFilter('all')}
+                        style={[styles.filterChip, dateFilter === 'all' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'all' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        All
+                    </Chip>
+                    <Chip
+                        selected={dateFilter === 'today'}
+                        onPress={() => setDateFilter('today')}
+                        style={[styles.filterChip, dateFilter === 'today' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'today' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        Today
+                    </Chip>
+                    <Chip
+                        selected={dateFilter === 'week'}
+                        onPress={() => setDateFilter('week')}
+                        style={[styles.filterChip, dateFilter === 'week' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'week' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        Week
+                    </Chip>
+                    <Chip
+                        selected={dateFilter === 'month'}
+                        onPress={() => setDateFilter('month')}
+                        style={[styles.filterChip, dateFilter === 'month' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'month' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        Month
+                    </Chip>
+                </View>
+
+                {/* Transactions List */}
+                <FlatList
+                    data={groupedTransactions}
+                    keyExtractor={(item) => item.date}
+                    renderItem={renderGroup}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <MaterialIcons name="receipt-long" size={64} color={themeColors.icon} />
+                            <Text variant="bodyLarge" style={[styles.emptyText, { color: themeColors.icon }]}>
+                                No transactions found
+                            </Text>
+                        </View>
+                    }
+                />
+
+                {/* FAB for adding transaction */}
+                <Portal>
+                    <FAB
+                        icon="plus"
+                        style={[styles.fab, { backgroundColor: themeColors.text }]}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            addSheetRef.current?.expand();
+                        }}
+                        color={themeColors.background}
+                    />
+                </Portal>
+
+                {/* Transaction Detail Bottom Sheet */}
+                <BottomSheet
+                    ref={detailSheetRef}
+                    snapPoints={['75%']}
+                    enablePanDownToClose
+                    backdropComponent={renderBackdrop}
+                    backgroundStyle={{ backgroundColor: themeColors.card }}
+                    onChange={(index) => {
+                        if (index === -1) {
+                            setSelectedTransaction(null);
+                        }
+                    }}
+                >
+                    <View style={styles.sheetHeader}>
+                        <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
+                            Transaction Details
+                        </Text>
+                        <TouchableOpacity onPress={() => detailSheetRef.current?.close()}>
+                            <MaterialIcons name="close" size={24} color={themeColors.icon} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {selectedTransaction && (
+                        <BottomSheetScrollView style={styles.sheetBody}>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Receiver</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.receiver}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Amount</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.error }]}>
+                                    ₹{selectedTransaction.amount}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Reference</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.reference}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Date & Time</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {format(new Date(selectedTransaction.timestamp), 'dd MMM yyyy, hh:mm a')}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Bank</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.bankName}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Account</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.accountNo}
+                                </Text>
+                            </View>
+                            <View style={[styles.rawMessageContainer, { backgroundColor: themeColors.background }]}>
+                                <Text style={[styles.rawMessageLabel, { color: themeColors.icon }]}>
+                                    Raw Message
+                                </Text>
+                                <Text style={[styles.rawMessageText, { color: themeColors.text }]}>
+                                    {selectedTransaction.rawMessage}
+                                </Text>
+                            </View>
+                        </BottomSheetScrollView>
+                    )}
+                </BottomSheet>
+
+                {/* Add Transaction Bottom Sheet */}
+                <BottomSheet
+                    ref={addSheetRef}
+                    index={-1}
+                    snapPoints={['55%']}
+                    enablePanDownToClose
+                    onChange={handleAddSheetChange}
+                    backdropComponent={renderBackdrop}
+                    backgroundStyle={{ backgroundColor: themeColors.card }}
+                >
+                    <View style={styles.sheetHeader}>
+                        <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
+                            Add Transaction
+                        </Text>
+                        <TouchableOpacity onPress={() => addSheetRef.current?.close()}>
+                            <MaterialIcons name="close" size={24} color={themeColors.icon} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <BottomSheetScrollView style={styles.sheetBody}>
+                        <View style={styles.inputGroup}>
+                            <TextInput
+                                label="Friendly Name (e.g., Salary Account)"
+                                value={newTransaction.receiver}
+                                onChangeText={(text) => setNewTransaction({ ...newTransaction, receiver: text })}
+                                mode="outlined"
+                                style={styles.input}
+                                left={<TextInput.Icon icon="account-circle" />}
+                                outlineColor={themeColors.cardBorder}
+                                activeOutlineColor={themeColors.text}
+                            />
+                            <TextInput
+                                label="Amount"
+                                value={newTransaction.amount}
+                                onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
+                                mode="outlined"
+                                style={styles.input}
+                                left={<TextInput.Icon icon="currency-inr" />}
+                                outlineColor={themeColors.cardBorder}
+                                activeOutlineColor={themeColors.text}
+                            />
+                            <TextInput
+                                label="Reference (Optional)"
+                                value={newTransaction.reference}
+                                onChangeText={(text) => setNewTransaction({ ...newTransaction, reference: text })}
+                                mode="outlined"
+                                style={styles.input}
+                                left={<TextInput.Icon icon="receipt" />}
+                                outlineColor={themeColors.cardBorder}
+                                activeOutlineColor={themeColors.text}
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.addButton, { backgroundColor: themeColors.text }]}
+                            onPress={handleAddTransaction}
+                        >
+                            <Text style={styles.addButtonText}>Add Transaction</Text>
+                        </TouchableOpacity>
+                    </BottomSheetScrollView>
+                </BottomSheet>
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+    },
     container: {
         flex: 1,
     },
-    header: {
-        paddingTop: Spacing.sm,
+    customHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        gap: Spacing.sm,
     },
-    searchBar: {
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    header: {
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.sm,
+        paddingBottom: Spacing.xs,
+    },
+    searchContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        gap: Spacing.sm,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 14,
+        fontFamily: FontFamily.regular,
+        paddingVertical: 3,
+    },
+    statsCard: {
+        flexDirection: 'row',
         marginHorizontal: Spacing.md,
-        marginBottom: Spacing.sm,
-        borderRadius: BorderRadius.lg,
+        marginVertical: Spacing.sm,
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statValue: {
+        fontSize: 16,
+        fontWeight: '700',
+        fontFamily: FontFamily.bold,
+    },
+    statLabel: {
+        fontSize: 10,
+        marginTop: 2,
+        fontFamily: FontFamily.regular,
+    },
+    statDivider: {
+        width: 1,
+        height: 28,
     },
     listContent: {
         paddingHorizontal: Spacing.md,
@@ -717,10 +802,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.xs,
     },
     input: {
-        borderWidth: 1,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.md,
-        fontSize: 16,
+        marginBottom: Spacing.md,
     },
     addButton: {
         padding: Spacing.md,
@@ -729,7 +811,7 @@ const styles = StyleSheet.create({
         marginTop: Spacing.md,
     },
     addButtonText: {
-        color: '#fff',
+        color: "#f9fafb",
         fontSize: 16,
         fontWeight: '600',
     },

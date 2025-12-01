@@ -1,5 +1,5 @@
 import { AccountLimitCard, RecentTransactionItem, TotalKharchaCard } from '@/components/dashboard';
-import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constants/theme';
 import * as accountQueries from '@/db/queries/account';
 import * as settingQueries from '@/db/queries/setting';
 import * as transactionQueries from '@/db/queries/transaction';
@@ -8,10 +8,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { FAB, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scheduleNotification } from './services/notifications';
@@ -34,7 +34,6 @@ export default function HomeScreen() {
   const [accounts, setAccounts] = useState<AccountWithStats[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
-  const [hasAutoRefreshed, setHasAutoRefreshed] = useState(false);
 
   // Computed totals
   const totalToday = accounts.reduce((sum, acc) => sum + acc.dailyTotal, 0);
@@ -69,8 +68,6 @@ export default function HomeScreen() {
   };
 
   const onRefresh = async () => {
-    setRefreshing(true);
-
     // Request permissions first
     const hasSmsPermission = await requestSmsPermission();
 
@@ -135,21 +132,19 @@ export default function HomeScreen() {
         );
       }
     }
-
-    setRefreshing(false);
   };
 
-  // Load data on screen focus and auto-refresh on first mount
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasAutoRefreshed) {
-        setHasAutoRefreshed(true);
-        onRefresh();
-      } else {
-        loadData();
-      }
-    }, [hasAutoRefreshed])
-  );
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Handle refresh with SMS reading
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  };
 
   const themeColors = Colors[colorScheme ?? 'light'];
 
@@ -159,26 +154,32 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[themeColors.primary]} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[themeColors.text]} />
           }
         >
           <View style={styles.headerContainer}>
             <View style={styles.headerRow}>
-              <View>
-                <Text variant="headlineLarge" style={[styles.header, { color: themeColors.text }]}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../assets/images/icon.png')}
+                  style={styles.appIcon}
+                />
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text variant="headlineMedium" style={[styles.header, { color: themeColors.text }]}>
                   My Accounts
                 </Text>
-                <Text variant="bodyMedium" style={[styles.subtitle, { color: themeColors.icon }]}>
+                <Text variant="bodySmall" style={[styles.subtitle, { color: themeColors.icon }]}>
                   {format(new Date(), 'EEEE, MMMM d, yyyy')}
                 </Text>
               </View>
-              <IconButton
-                icon="refresh"
-                size={24}
-                iconColor={themeColors.primary}
-                onPress={onRefresh}
+              <TouchableOpacity
+                onPress={handleRefresh}
                 disabled={refreshing}
-              />
+                style={[styles.refreshButton, { backgroundColor: themeColors.card }]}
+              >
+                <MaterialIcons name="refresh" size={22} color="#1f2937" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -194,7 +195,8 @@ export default function HomeScreen() {
               <FAB
                 icon="plus"
                 label="Add Account"
-                style={[styles.emptyButton, { backgroundColor: themeColors.primary }]}
+                color={themeColors.background}
+                style={[styles.emptyButton, { backgroundColor: themeColors.text }]}
                 onPress={() => router.push('/screens/SetupScreen')}
               />
             </View>
@@ -238,8 +240,8 @@ export default function HomeScreen() {
                   {"Today's Transactions"}
                 </Text>
                 {allTodayTransactions.length > 0 && (
-                  <View style={[styles.countBadge, { backgroundColor: themeColors.primary + '20' }]}>
-                    <Text style={[styles.countText, { color: themeColors.primary }]}>
+                  <View style={[styles.countBadge, { backgroundColor: '#1f2937' }]}>
+                    <Text style={[styles.countText, { color: '#fff' }]}>
                       {allTodayTransactions.length}
                     </Text>
                   </View>
@@ -282,7 +284,8 @@ export default function HomeScreen() {
 
         <FAB
           icon="cog"
-          style={[styles.fab, { backgroundColor: themeColors.primary }]}
+          color={themeColors.background}
+          style={[styles.fab, { backgroundColor: '#1f2937' }]}
           onPress={() => router.push('/screens/SetupScreen')}
         />
       </View>
@@ -306,16 +309,40 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  logoContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  appIcon: {
+    width: 44,
+    height: 44,
+    resizeMode: 'contain',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   header: {
-    fontWeight: '700',
-    marginBottom: Spacing.xs / 2,
+    fontWeight: '800',
+    fontFamily: FontFamily.extraBold,
+    fontSize: 22,
   },
   subtitle: {
-    opacity: 0.7,
-    fontSize: 13,
+    opacity: 0.6,
+    fontSize: 12,
+    fontFamily: FontFamily.regular,
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyCard: {
     borderRadius: BorderRadius.lg,
@@ -348,7 +375,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   sectionTitle: {
-    fontWeight: '600',
+    fontWeight: '700',
+    fontFamily: FontFamily.bold,
   },
   countBadge: {
     paddingHorizontal: Spacing.sm,

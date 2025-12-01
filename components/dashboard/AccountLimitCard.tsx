@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
@@ -45,16 +45,21 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
 
     // Calculate comparison with yesterday
     const difference = dailyTotal - yesterdayTotal;
-    const isLower = difference < 0;
+    const isLower = difference <= 0;
     const percentChange = yesterdayTotal > 0
         ? Math.abs((difference / yesterdayTotal) * 100).toFixed(0)
         : dailyTotal > 0 ? '100' : '0';
 
     const accentColor = cardColor || themeColors.primary;
 
+    const iconName = (cardIcon || 'account-balance') as keyof typeof MaterialIcons.glyphMap;
+
     return (
-        <View style={[styles.card, { backgroundColor: themeColors.card, borderLeftColor: accentColor, ...Elevation.md }]}>
+        <View style={[styles.card, { backgroundColor: themeColors.card, borderLeftColor: accentColor, ...Elevation.sm }]}>
             <View style={styles.cardHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: accentColor + '15' }]}>
+                    <MaterialIcons name={iconName} size={22} color={accentColor} />
+                </View>
                 <View style={styles.cardTitleContainer}>
                     <Text variant="titleMedium" style={[styles.accountName, { color: themeColors.text }]}>
                         {name}
@@ -63,7 +68,7 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
                         {bankName}
                     </Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
                     <Text variant="labelSmall" style={[styles.statusText, { color: statusColor }]}>
                         {statusText}
                     </Text>
@@ -122,15 +127,23 @@ const styles = StyleSheet.create({
     },
     cardHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: Spacing.sm,
+        alignItems: 'center',
+        marginBottom: Spacing.md,
+        gap: Spacing.sm,
+    },
+    iconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     cardTitleContainer: {
         flex: 1,
     },
     accountName: {
         fontWeight: '600',
+        fontFamily: FontFamily.semiBold,
     },
     bankName: {
         opacity: 0.7,
@@ -157,6 +170,7 @@ const styles = StyleSheet.create({
     },
     amount: {
         fontWeight: '700',
+        fontFamily: FontFamily.bold,
     },
     comparisonBadge: {
         flexDirection: 'row',

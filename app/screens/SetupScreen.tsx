@@ -1,11 +1,13 @@
-import { BorderRadius, Colors, Elevation, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constants/theme';
 import { CARD_COLORS, CARD_ICONS, SelectBank } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, IconButton, Menu, Text, TextInput } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import * as accountQueries from '../../db/queries/account';
 import * as bankQueries from '../../db/queries/bank';
 
@@ -23,9 +25,6 @@ export default function SetupScreen() {
     const [selectedColor, setSelectedColor] = useState(CARD_COLORS[0].value);
     const [selectedIcon, setSelectedIcon] = useState(CARD_ICONS[0].value);
 
-    useEffect(() => {
-        loadBanks();
-    }, []);
 
     const loadBanks = async () => {
         const b = await bankQueries.findAll({});
@@ -34,7 +33,11 @@ export default function SetupScreen() {
 
     const handleAddAccount = async () => {
         if (!selectedBank || !friendlyName || !upiLimit) {
-            Alert.alert('Error', 'Please fill all fields');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Please fill all fields',
+            });
             return;
         }
 
@@ -51,165 +54,236 @@ export default function SetupScreen() {
             setFriendlyName('');
             setUpiLimit('');
             setSelectedBank(null);
-            Alert.alert('Success', 'Account added successfully');
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Account added successfully',
+            });
             router.back();
         } catch (e) {
-            Alert.alert('Error', 'Failed to add account');
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Failed to add account",
+            })
         }
     };
 
     const themeColors = Colors[colorScheme ?? 'light'];
 
+    useEffect(() => {
+        loadBanks();
+    }, []);
+
     return (
-        <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
-            <View style={styles.header}>
-                <Text variant="headlineMedium" style={[styles.headerTitle, { color: themeColors.text }]}>
-                    Add New Account
-                </Text>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+            {/* Custom Header */}
+            <View style={styles.customHeader}>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={[styles.backButton, { backgroundColor: themeColors.card }]}
+                >
+                    <MaterialIcons name="arrow-back" size={22} color="#1f2937" />
+                </TouchableOpacity>
+                <View style={styles.headerTextContainer}>
+                    <Text variant="titleLarge" style={[styles.headerTitle, { color: themeColors.text }]}>
+                        Add Account
+                    </Text>
+                </View>
+            </View>
+
+            <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <Text variant="bodyMedium" style={[styles.headerSubtitle, { color: themeColors.icon }]}>
                     Select your bank and configure your daily UPI limit
                 </Text>
-            </View>
 
-            <Card style={[styles.card, { backgroundColor: themeColors.card, ...Elevation.md }]}>
-                <Card.Content>
-                    <View style={styles.cardHeader}>
-                        <IconButton icon="account-plus" size={28} iconColor={themeColors.primary} />
-                        <Text variant="titleLarge" style={[styles.cardTitle, { color: themeColors.text }]}>
-                            Account Details
+                <Card style={[styles.card, { backgroundColor: themeColors.card, ...Elevation.md }]}>
+                    <Card.Content>
+                        <View style={styles.cardHeader}>
+                            <IconButton icon="account-plus" size={28} iconColor={themeColors.text} />
+                            <Text variant="titleLarge" style={[styles.cardTitle, { color: themeColors.text }]}>
+                                Account Details
+                            </Text>
+                        </View>
+
+                        <View style={styles.dropdownContainer}>
+                            <Menu
+                                visible={menuVisible}
+                                onDismiss={() => setMenuVisible(false)}
+                                anchor={
+                                    <Button
+                                        mode="outlined"
+                                        onPress={() => setMenuVisible(true)}
+                                        textColor={themeColors.text}
+                                        style={[styles.selectButton, { borderColor: themeColors.cardBorder }]}
+                                        icon="chevron-down"
+                                        contentStyle={styles.selectButtonContent}
+                                    >
+                                        {selectedBank ? selectedBank.name : 'Select Bank'}
+                                    </Button>
+                                }
+                            >
+                                {banks.map((bank) => (
+                                    <Menu.Item
+                                        key={bank.id}
+                                        onPress={() => {
+                                            setSelectedBank(bank);
+                                            setMenuVisible(false);
+                                        }}
+                                        title={bank.name}
+                                    />
+                                ))}
+                            </Menu>
+                        </View>
+
+                        <TextInput
+                            label="Friendly Name (e.g., Salary Account)"
+                            value={friendlyName}
+                            onChangeText={setFriendlyName}
+                            mode="outlined"
+                            style={styles.input}
+                            left={<TextInput.Icon icon="account-circle" />}
+                            outlineColor={themeColors.cardBorder}
+                            activeOutlineColor={themeColors.text}
+                        />
+                        <TextInput
+                            label="Last 4 Digit of Account Number"
+                            value={accountNo}
+                            onChangeText={setAccountNo}
+                            mode="outlined"
+                            style={styles.input}
+                            left={<TextInput.Icon icon="account-circle" />}
+                            outlineColor={themeColors.cardBorder}
+                            activeOutlineColor={themeColors.text}
+                        />
+                        <TextInput
+                            label="Daily UPI Limit (e.g., 100000)"
+                            value={upiLimit}
+                            onChangeText={setUpiLimit}
+                            keyboardType="numeric"
+                            mode="outlined"
+                            style={styles.input}
+                            left={<TextInput.Icon icon="currency-inr" />}
+                            outlineColor={themeColors.cardBorder}
+                            activeOutlineColor={themeColors.text}
+                        />
+
+                        {/* Card Color Selection */}
+                        <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
+                            Card Color
                         </Text>
-                    </View>
-
-                    <View style={styles.dropdownContainer}>
-                        <Menu
-                            visible={menuVisible}
-                            onDismiss={() => setMenuVisible(false)}
-                            anchor={
-                                <Button
-                                    mode="outlined"
-                                    onPress={() => setMenuVisible(true)}
-                                    style={[styles.selectButton, { borderColor: themeColors.cardBorder }]}
-                                    icon="chevron-down"
-                                    contentStyle={styles.selectButtonContent}
+                        <View style={styles.colorGrid}>
+                            {CARD_COLORS.map((color) => (
+                                <TouchableOpacity
+                                    key={color.value}
+                                    onPress={() => setSelectedColor(color.value)}
+                                    style={[
+                                        styles.colorOption,
+                                        { backgroundColor: color.value },
+                                        selectedColor === color.value && styles.colorOptionSelected,
+                                    ]}
                                 >
-                                    {selectedBank ? selectedBank.name : 'Select Bank'}
-                                </Button>
-                            }
-                        >
-                            {banks.map((bank) => (
-                                <Menu.Item
-                                    key={bank.id}
-                                    onPress={() => {
-                                        setSelectedBank(bank);
-                                        setMenuVisible(false);
-                                    }}
-                                    title={bank.name}
-                                />
+                                    {selectedColor === color.value && (
+                                        <MaterialIcons name="check" size={20} color="#fff" />
+                                    )}
+                                </TouchableOpacity>
                             ))}
-                        </Menu>
-                    </View>
+                        </View>
 
-                    <TextInput
-                        label="Friendly Name (e.g., Salary Account)"
-                        value={friendlyName}
-                        onChangeText={setFriendlyName}
-                        mode="outlined"
-                        style={styles.input}
-                        left={<TextInput.Icon icon="account-circle" />}
-                        outlineColor={themeColors.cardBorder}
-                        activeOutlineColor={themeColors.primary}
-                    />
-                    <TextInput
-                        label="Account Number"
-                        value={accountNo}
-                        onChangeText={setAccountNo}
-                        mode="outlined"
-                        style={styles.input}
-                        left={<TextInput.Icon icon="account-circle" />}
-                        outlineColor={themeColors.cardBorder}
-                        activeOutlineColor={themeColors.primary}
-                    />
-                    <TextInput
-                        label="Daily UPI Limit (e.g., 100000)"
-                        value={upiLimit}
-                        onChangeText={setUpiLimit}
-                        keyboardType="numeric"
-                        mode="outlined"
-                        style={styles.input}
-                        left={<TextInput.Icon icon="currency-inr" />}
-                        outlineColor={themeColors.cardBorder}
-                        activeOutlineColor={themeColors.primary}
-                    />
-
-                    {/* Card Color Selection */}
-                    <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
-                        Card Color
-                    </Text>
-                    <View style={styles.colorGrid}>
-                        {CARD_COLORS.map((color) => (
-                            <TouchableOpacity
-                                key={color.value}
-                                onPress={() => setSelectedColor(color.value)}
-                                style={[
-                                    styles.colorOption,
-                                    { backgroundColor: color.value },
-                                    selectedColor === color.value && styles.colorOptionSelected,
-                                ]}
-                            >
-                                {selectedColor === color.value && (
-                                    <MaterialIcons name="check" size={20} color="#fff" />
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    {/* Card Icon Selection */}
-                    <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
-                        Card Icon
-                    </Text>
-                    <View style={styles.iconGrid}>
-                        {CARD_ICONS.map((icon) => (
-                            <TouchableOpacity
-                                key={icon.value}
-                                onPress={() => setSelectedIcon(icon.value)}
-                                style={[
-                                    styles.iconOption,
-                                    { backgroundColor: themeColors.background },
-                                    selectedIcon === icon.value && { backgroundColor: selectedColor, borderColor: selectedColor },
-                                ]}
-                            >
-                                <MaterialIcons
-                                    name={icon.value as keyof typeof MaterialIcons.glyphMap}
-                                    size={24}
-                                    color={selectedIcon === icon.value ? '#fff' : themeColors.icon}
-                                />
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    <Button
-                        mode="contained"
-                        onPress={handleAddAccount}
-                        style={[styles.button, { backgroundColor: selectedColor }]}
-                        disabled={banks.length === 0}
-                        icon="check"
-                    >
-                        Add Account
-                    </Button>
-                    {banks.length === 0 && (
-                        <Text variant="bodySmall" style={[styles.helpText, { color: themeColors.warning }]}>
-                            Please add a bank first before creating an account
+                        {/* Card Icon Selection */}
+                        <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
+                            Card Icon
                         </Text>
-                    )}
-                </Card.Content>
-            </Card>
+                        <View style={styles.iconGrid}>
+                            {CARD_ICONS.map((icon) => (
+                                <TouchableOpacity
+                                    key={icon.value}
+                                    onPress={() => setSelectedIcon(icon.value)}
+                                    style={[
+                                        styles.iconOption,
+                                        { backgroundColor: themeColors.background },
+                                        selectedIcon === icon.value && { backgroundColor: selectedColor, borderColor: selectedColor },
+                                    ]}
+                                >
+                                    <MaterialIcons
+                                        name={icon.value as keyof typeof MaterialIcons.glyphMap}
+                                        size={24}
+                                        color={selectedIcon === icon.value ? '#fff' : themeColors.icon}
+                                    />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
-            <View style={styles.spacer} />
-        </ScrollView>
+                        {/* Preview Card */}
+                        <Text variant="labelLarge" style={[styles.sectionLabel, { color: themeColors.text }]}>
+                            Preview
+                        </Text>
+                        <View style={[styles.previewCard, { backgroundColor: themeColors.background }]}>
+                            <View style={[styles.previewIconContainer, { backgroundColor: selectedColor + '15' }]}>
+                                <MaterialIcons
+                                    name={selectedIcon as keyof typeof MaterialIcons.glyphMap}
+                                    size={28}
+                                    color={selectedColor}
+                                />
+                            </View>
+                            <View style={styles.previewTextContainer}>
+                                <Text style={[styles.previewName, { color: themeColors.text }]}>
+                                    {friendlyName || 'Account Name'}
+                                </Text>
+                                <Text style={[styles.previewBank, { color: themeColors.icon }]}>
+                                    {selectedBank?.name || 'Select Bank'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <Button
+                            mode="contained"
+                            onPress={handleAddAccount}
+                            style={[styles.button, { backgroundColor: selectedColor }]}
+                            disabled={banks.length === 0}
+                            icon="check"
+                        >
+                            Add Account
+                        </Button>
+                        {banks.length === 0 && (
+                            <Text variant="bodySmall" style={[styles.helpText, { color: themeColors.warning }]}>
+                                Please add a bank first before creating an account
+                            </Text>
+                        )}
+                    </Card.Content>
+                </Card>
+
+                <View style={styles.spacer} />
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+    },
+    customHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        gap: Spacing.sm,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTextContainer: {
+        flex: 1,
+    },
+    scrollContent: {
+        flex: 1,
+        paddingHorizontal: Spacing.md,
+    },
     container: {
         flex: 1,
         padding: Spacing.md,
@@ -219,10 +293,11 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontWeight: '700',
-        marginBottom: Spacing.xs,
+        fontFamily: FontFamily.bold,
     },
     headerSubtitle: {
         opacity: 0.8,
+        marginBottom: Spacing.md,
     },
     card: {
         marginBottom: Spacing.md,
@@ -260,6 +335,33 @@ const styles = StyleSheet.create({
     },
     spacer: {
         height: Spacing.xl,
+    },
+    previewCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        gap: Spacing.md,
+        marginBottom: Spacing.md,
+    },
+    previewIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    previewTextContainer: {
+        flex: 1,
+    },
+    previewName: {
+        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: FontFamily.semiBold,
+    },
+    previewBank: {
+        fontSize: 13,
+        marginTop: 2,
     },
     sectionLabel: {
         fontWeight: '600',
