@@ -1,4 +1,5 @@
-import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constants/theme';
+import { COMPONENT_SIZE, FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
+import { Colors, Elevation, FontFamily } from '@/constants/theme';
 import { CARD_COLORS, CARD_ICONS, SelectAccount } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -158,7 +159,7 @@ export default function EditAccountScreen() {
                     onPress={() => router.back()}
                     style={[styles.backButton, { backgroundColor: themeColors.card }]}
                 >
-                    <MaterialIcons name="arrow-back" size={22} color="#1f2937" />
+                    <MaterialIcons name="arrow-back" size={ICON_SIZE.lg} color="#1f2937" />
                 </TouchableOpacity>
                 <View style={styles.headerTextContainer}>
                     <Text variant="titleLarge" style={[styles.headerTitle, { color: themeColors.text }]}>
@@ -169,7 +170,7 @@ export default function EditAccountScreen() {
                     onPress={handleDeleteAccount}
                     style={[styles.deleteButton, { backgroundColor: themeColors.error + '15' }]}
                 >
-                    <MaterialIcons name="delete" size={22} color={themeColors.error} />
+                    <MaterialIcons name="delete" size={ICON_SIZE.lg} color={themeColors.error} />
                 </TouchableOpacity>
             </View>
 
@@ -196,7 +197,7 @@ export default function EditAccountScreen() {
                             onChangeText={setFriendlyName}
                             mode="outlined"
                             style={styles.input}
-                            left={<TextInput.Icon icon="account-circle" />}
+                            left={<TextInput.Icon icon="account-circle" size={ICON_SIZE.md} />}
                             outlineColor={themeColors.cardBorder}
                             activeOutlineColor={themeColors.text}
                         />
@@ -206,7 +207,7 @@ export default function EditAccountScreen() {
                             onChangeText={setAccountNo}
                             mode="outlined"
                             style={styles.input}
-                            left={<TextInput.Icon icon="credit-card" />}
+                            left={<TextInput.Icon icon="credit-card" size={ICON_SIZE.md} />}
                             outlineColor={themeColors.cardBorder}
                             activeOutlineColor={themeColors.text}
                         />
@@ -217,7 +218,7 @@ export default function EditAccountScreen() {
                             keyboardType="numeric"
                             mode="outlined"
                             style={styles.input}
-                            left={<TextInput.Icon icon="currency-inr" />}
+                            left={<TextInput.Icon icon="currency-inr" size={ICON_SIZE.md} />}
                             outlineColor={themeColors.cardBorder}
                             activeOutlineColor={themeColors.text}
                         />
@@ -238,7 +239,7 @@ export default function EditAccountScreen() {
                                     ]}
                                 >
                                     {selectedColor === color.value && (
-                                        <MaterialIcons name="check" size={20} color="#fff" />
+                                        <MaterialIcons name="check" size={ICON_SIZE.md} color="#fff" />
                                     )}
                                 </TouchableOpacity>
                             ))}
@@ -261,7 +262,7 @@ export default function EditAccountScreen() {
                                 >
                                     <MaterialIcons
                                         name={icon.value as keyof typeof MaterialIcons.glyphMap}
-                                        size={24}
+                                        size={ICON_SIZE.lg}
                                         color={selectedIcon === icon.value ? '#fff' : themeColors.icon}
                                     />
                                 </TouchableOpacity>
@@ -276,7 +277,7 @@ export default function EditAccountScreen() {
                             <View style={[styles.previewIconContainer, { backgroundColor: selectedColor + '15' }]}>
                                 <MaterialIcons
                                     name={selectedIcon as keyof typeof MaterialIcons.glyphMap}
-                                    size={28}
+                                    size={ICON_SIZE.lg}
                                     color={selectedColor}
                                 />
                             </View>
@@ -294,6 +295,7 @@ export default function EditAccountScreen() {
                             mode="contained"
                             onPress={handleUpdateAccount}
                             style={[styles.button, { backgroundColor: selectedColor }]}
+                            labelStyle={styles.buttonLabel}
                             icon="check"
                         >
                             Save Changes
@@ -319,21 +321,21 @@ const styles = StyleSheet.create({
     customHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        gap: Spacing.sm,
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.sm,
+        gap: SPACING.sm,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.md,
+        width: ICON_SIZE.xxl,
+        height: ICON_SIZE.xxl,
+        borderRadius: RADIUS.md,
         justifyContent: 'center',
         alignItems: 'center',
     },
     deleteButton: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.md,
+        width: ICON_SIZE.xxl,
+        height: ICON_SIZE.xxl,
+        borderRadius: RADIUS.md,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -342,56 +344,64 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flex: 1,
-        paddingHorizontal: Spacing.md,
+        paddingHorizontal: SPACING.screenPadding,
     },
     headerTitle: {
         fontWeight: '700',
         fontFamily: FontFamily.bold,
+        fontSize: FONT_SIZE.xl,
     },
     headerSubtitle: {
         opacity: 0.8,
-        marginBottom: Spacing.md,
+        marginBottom: SPACING.md,
+        fontSize: FONT_SIZE.md,
     },
     card: {
-        marginBottom: Spacing.md,
-        borderRadius: BorderRadius.lg,
+        marginBottom: SPACING.md,
+        borderRadius: RADIUS.lg,
     },
     readOnlyField: {
-        marginBottom: Spacing.md,
-        paddingVertical: Spacing.sm,
+        marginBottom: SPACING.md,
+        paddingVertical: SPACING.sm,
         borderBottomWidth: 1,
         borderBottomColor: '#e5e7eb',
     },
     readOnlyLabel: {
-        fontSize: 12,
-        marginBottom: 4,
+        fontSize: FONT_SIZE.sm,
+        marginBottom: SPACING.xs,
     },
     readOnlyValue: {
         fontWeight: '600',
         fontFamily: FontFamily.semiBold,
+        fontSize: FONT_SIZE.lg,
     },
     input: {
-        marginBottom: Spacing.md,
+        marginBottom: SPACING.md,
     },
     button: {
-        marginTop: Spacing.xs,
-        borderRadius: BorderRadius.sm,
+        marginTop: SPACING.md,
+        borderRadius: RADIUS.md,
+    },
+    buttonLabel: {
+        fontSize: FONT_SIZE.md,
+        fontFamily: FontFamily.semiBold,
     },
     sectionLabel: {
         fontWeight: '600',
-        marginBottom: Spacing.sm,
-        marginTop: Spacing.sm,
+        marginBottom: SPACING.sm,
+        marginTop: SPACING.sm,
+        fontSize: FONT_SIZE.md,
     },
     colorGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing.sm,
-        marginBottom: Spacing.md,
+        gap: SPACING.sm,
+        marginBottom: SPACING.md,
     },
     colorOption: {
-        width: 44,
-        height: 44,
-        borderRadius: BorderRadius.full,
+        width: COMPONENT_SIZE.appIconSize,
+        height: COMPONENT_SIZE.appIconSize,
+        borderRadius: RADIUS.rounded,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -402,13 +412,13 @@ const styles = StyleSheet.create({
     iconGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing.sm,
-        marginBottom: Spacing.md,
+        gap: SPACING.sm,
+        marginBottom: SPACING.md,
     },
     iconOption: {
-        width: 48,
-        height: 48,
-        borderRadius: BorderRadius.md,
+        width: COMPONENT_SIZE.avatarMd,
+        height: COMPONENT_SIZE.avatarMd,
+        borderRadius: RADIUS.md,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
@@ -417,16 +427,16 @@ const styles = StyleSheet.create({
     previewCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        gap: Spacing.md,
-        marginBottom: Spacing.md,
+        padding: SPACING.md,
+        borderRadius: RADIUS.md,
+        gap: SPACING.md,
+        marginBottom: SPACING.md,
         borderLeftWidth: 4,
     },
     previewIconContainer: {
-        width: 52,
-        height: 52,
-        borderRadius: BorderRadius.md,
+        width: COMPONENT_SIZE.avatarMd,
+        height: COMPONENT_SIZE.avatarMd,
+        borderRadius: RADIUS.md,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -434,15 +444,15 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     previewName: {
-        fontSize: 16,
+        fontSize: FONT_SIZE.lg,
         fontWeight: '600',
         fontFamily: FontFamily.semiBold,
     },
     previewBank: {
-        fontSize: 13,
+        fontSize: FONT_SIZE.sm,
         marginTop: 2,
     },
     spacer: {
-        height: Spacing.xl,
+        height: SPACING.xl,
     },
 });

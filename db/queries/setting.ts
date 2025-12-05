@@ -35,3 +35,8 @@ export async function getLastRefreshTime(): Promise<number> {
 export async function setLastRefreshTime(timestamp: number) {
     return set('lastRefreshTime', timestamp.toString());
 }
+
+export async function isOnboardingComplete(): Promise<boolean> {
+    const setting = await get('onboarding_complete');
+    return setting?.value === 'true';
+}

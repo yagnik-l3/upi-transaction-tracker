@@ -1,5 +1,6 @@
 import { AccountLimitCard, RecentTransactionItem, TotalKharchaCard } from '@/components/dashboard';
-import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constants/theme';
+import { COMPONENT_SIZE, FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
+import { Colors, Elevation, FontFamily } from '@/constants/theme';
 import * as accountQueries from '@/db/queries/account';
 import * as settingQueries from '@/db/queries/setting';
 import * as transactionQueries from '@/db/queries/transaction';
@@ -14,8 +15,8 @@ import React, { useCallback, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { FAB, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { scheduleNotification } from './services/notifications';
-import { readSms, requestSmsPermission } from './services/smsReader';
+import { scheduleNotification } from '../../services/notifications';
+import { readSms } from '../../services/smsReader';
 
 interface AccountWithStats extends SelectAccount {
   dailyTotal: number;
@@ -34,6 +35,31 @@ export default function HomeScreen() {
   const [accounts, setAccounts] = useState<AccountWithStats[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
+  // const [hasSmsPermission, setHasSmsPermission] = useState<boolean>(hasOnboarded);
+
+  // Request SMS permission
+  // const requestSmsPermission = async () => {
+  //   if (Platform.OS !== 'android') return;
+  //   try {
+  //     const granted = await PermissionsAndroid.request(
+  //       PermissionsAndroid.PERMISSIONS.READ_SMS,
+  //       {
+  //         title: 'SMS Permission Required',
+  //         message: 'This app needs access to your SMS messages to automatically detect and track your UPI transactions.',
+  //         buttonNeutral: 'Ask Me Later',
+  //         buttonNegative: 'Cancel',
+  //         buttonPositive: 'Grant Permission',
+  //       }
+  //     );
+  //     const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
+  //     setHasSmsPermission(isGranted);
+  //     if (isGranted) {
+  //       handleRefresh();
+  //     }
+  //   } catch (err) {
+  //     console.error('SMS Permission error:', err);
+  //   }
+  // };
 
   // Computed totals
   const totalToday = accounts.reduce((sum, acc) => sum + acc.dailyTotal, 0);
@@ -43,7 +69,7 @@ export default function HomeScreen() {
     .sort((a, b) => b.timestamp - a.timestamp);
 
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const fetchedAccounts = await accountQueries.findAll({});
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -65,82 +91,77 @@ export default function HomeScreen() {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [])
 
   const onRefresh = async () => {
-    // Request permissions first
-    const hasSmsPermission = await requestSmsPermission();
-    if (hasSmsPermission) {
-      try {
-        // Get last SMS timestamp
-        const lastTimestamp = await settingQueries.getLastRefreshTime();
+    try {
+      // Get last SMS timestamp
+      const lastTimestamp = await settingQueries.getLastRefreshTime();
 
-        // Read only new SMS messages
-        const transactions = await readSms(lastTimestamp);
+      // Read only new SMS messages
+      const transactions = await readSms(lastTimestamp);
+      if (transactions.length > 0) {
+        // Collect unique bank+account combinations from transactions
+        const uniqueAccounts = new Map<string, { bankName: string; accountNo: string }>();
+        const txs: InsertTransaction[] = [];
 
-        if (transactions.length > 0) {
-          // Collect unique bank+account combinations from transactions
-          const uniqueAccounts = new Map<string, { bankName: string; accountNo: string }>();
-          const txs: InsertTransaction[] = [];
-
-          for (const tx of transactions) {
-            const key = `${tx.bankName}:${tx.accountNo}`;
-            if (!uniqueAccounts.has(key)) {
-              uniqueAccounts.set(key, { bankName: tx.bankName, accountNo: tx.accountNo });
-            }
-            txs.push({
-              bankName: tx.bankName,
-              accountNo: tx.accountNo,
-              amount: tx.amount,
-              receiver: tx.receiver,
-              reference: tx.reference,
-              date: tx.date,
-              timestamp: tx.timestamp,
-              rawMessage: tx.rawMessage
-            });
+        for (const tx of transactions) {
+          const key = `${tx.bankName}:${tx.accountNo}`;
+          if (!uniqueAccounts.has(key)) {
+            uniqueAccounts.set(key, { bankName: tx.bankName, accountNo: tx.accountNo });
           }
-
-          // Get existing accounts in one query
-          const existingAccounts = await accountQueries.findAll({});
-          const existingKeys = new Set(
-            existingAccounts.map(acc => `${acc.bankName}:${acc.accountNo}`)
-          );
-
-          // Create new accounts for bank+accountNo combinations that don't exist
-          const newAccounts: InsertAccount[] = [];
-          let colorIndex = existingAccounts.length;
-
-          for (const [key, accInfo] of uniqueAccounts) {
-            if (!existingKeys.has(key)) {
-              // Auto-create account with default values
-              newAccounts.push({
-                bankName: accInfo.bankName,
-                accountNo: accInfo.accountNo,
-                name: `${accInfo.bankName} ****${accInfo.accountNo.slice(-4)}`,
-                upiLimit: 100000, // Default limit
-                cardColor: CARD_COLORS[colorIndex % CARD_COLORS.length].value,
-                cardIcon: CARD_ICONS[0].value,
-              });
-              colorIndex++;
-            }
-          }
-
-          // Batch create new accounts
-          if (newAccounts.length > 0) {
-            await accountQueries.createMany(newAccounts);
-            console.log(`Auto-created ${newAccounts.length} new accounts`);
-          }
-
-          // Batch create transactions
-          await transactionQueries.createMany(txs);
-          console.log(`Added ${txs.length} new transactions`);
+          txs.push({
+            bankName: tx.bankName,
+            accountNo: tx.accountNo,
+            amount: tx.amount,
+            receiver: tx.receiver,
+            reference: tx.reference,
+            date: tx.date,
+            timestamp: tx.timestamp,
+            rawMessage: tx.rawMessage
+          });
         }
 
-        // Update last SMS timestamp
-        await settingQueries.setLastRefreshTime(Date.now());
-      } catch (e) {
-        console.error(e);
+        // Get existing accounts in one query
+        const existingAccounts = await accountQueries.findAll({});
+        const existingKeys = new Set(
+          existingAccounts.map(acc => `${acc.bankName}:${acc.accountNo}`)
+        );
+
+        // Create new accounts for bank+accountNo combinations that don't exist
+        const newAccounts: InsertAccount[] = [];
+        let colorIndex = existingAccounts.length;
+
+        for (const [key, accInfo] of uniqueAccounts) {
+          if (!existingKeys.has(key)) {
+            // Auto-create account with default values
+            newAccounts.push({
+              bankName: accInfo.bankName,
+              accountNo: accInfo.accountNo,
+              name: `${accInfo.bankName} ****${accInfo.accountNo.slice(-4)}`,
+              upiLimit: 100000, // Default limit
+              cardColor: CARD_COLORS[colorIndex % CARD_COLORS.length].value,
+              cardIcon: CARD_ICONS[0].value,
+            });
+            colorIndex++;
+          }
+        }
+
+        // Batch create new accounts
+        if (newAccounts.length > 0) {
+          await accountQueries.createMany(newAccounts);
+          console.log(`Auto-created ${newAccounts.length} new accounts`);
+        }
+
+        // Batch create transactions
+        await transactionQueries.createMany(txs);
+        console.log(`Added ${txs.length} new transactions`);
       }
+
+      // Update last SMS timestamp
+      await settingQueries.setLastRefreshTime(Date.now());
+    } catch (e) {
+      console.error(e);
     }
 
     await loadData();
@@ -164,7 +185,7 @@ export default function HomeScreen() {
     }
   };
 
-  // Handle refresh with SMS reading
+  // Handle refresh with SMS reading (only if permission granted)
   const handleRefresh = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -176,7 +197,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // Load data on mount and when screen is focused
+  // Load data on focus
   useFocusEffect(
     useCallback(() => {
       handleRefresh();
@@ -206,16 +227,42 @@ export default function HomeScreen() {
               </View>
               <View style={styles.logoContainer}>
                 <Image
-                  source={require('../assets/images/icon.png')}
+                  source={require('../../assets/images/icon.png')}
                   style={styles.appIcon}
                 />
               </View>
             </View>
           </View>
 
+          {/* SMS Permission Banner */}
+          {/* {hasSmsPermission === false && (
+            <View style={[styles.permissionBanner, { backgroundColor: themeColors.warning + '15', borderColor: themeColors.warning }]}>
+              <View style={styles.permissionBannerContent}>
+                <MaterialIcons name="sms" size={ICON_SIZE.lg} color={themeColors.warning} />
+                <View style={styles.permissionBannerText}>
+                  <Text variant="titleSmall" style={[styles.permissionBannerTitle, { color: themeColors.text }]}>
+                    SMS Permission Required
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: themeColors.icon }}>
+                    Grant permission to automatically track your UPI transactions
+                  </Text>
+                </View>
+              </View>
+              <Button
+                mode="contained"
+                onPress={requestSmsPermission}
+                style={[styles.permissionBannerButton, { backgroundColor: themeColors.warning }]}
+                labelStyle={styles.permissionBannerButtonLabel}
+                compact
+              >
+                Grant
+              </Button>
+            </View>
+          )} */}
+
           {accounts.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: themeColors.card, ...Elevation.md }]}>
-              <IconButton icon="bank-off" size={64} iconColor={themeColors.icon} />
+              <IconButton icon="bank-off" size={ICON_SIZE.xxxl} iconColor={themeColors.icon} />
               <Text variant="titleLarge" style={[styles.emptyTitle, { color: themeColors.text }]}>
                 No Accounts Yet
               </Text>
@@ -227,7 +274,7 @@ export default function HomeScreen() {
                 label="Add Account"
                 color={themeColors.background}
                 style={[styles.emptyButton, { backgroundColor: themeColors.text }]}
-                onPress={() => router.push('/screens/SetupScreen')}
+                onPress={() => router.push('/(protected)/setup')}
               />
             </View>
           ) : (
@@ -249,7 +296,7 @@ export default function HomeScreen() {
               {accounts.map((account) => (
                 <TouchableOpacity
                   key={account.id}
-                  onPress={() => router.push({ pathname: '/screens/TransactionsScreen', params: { accountId: account.id, bankName: account.bankName, accountNo: account.accountNo } })}
+                  onPress={() => router.push({ pathname: '/(protected)/transaction', params: { accountId: account.id, bankName: account.bankName, accountNo: account.accountNo } })}
                   activeOpacity={0.7}
                 >
                   <AccountLimitCard
@@ -260,7 +307,7 @@ export default function HomeScreen() {
                     upiLimit={account.upiLimit}
                     cardColor={account.cardColor}
                     cardIcon={account.cardIcon}
-                    onEdit={() => router.push({ pathname: '/screens/EditAccountScreen', params: { accountId: account.id } })}
+                    onEdit={() => router.push({ pathname: '/(protected)/edit-account', params: { accountId: account.id } })}
                   />
                 </TouchableOpacity>
               ))}
@@ -281,8 +328,8 @@ export default function HomeScreen() {
 
               {allTodayTransactions.length === 0 ? (
                 <View style={[styles.emptyTransactions, { backgroundColor: themeColors.card }]}>
-                  <MaterialIcons name="receipt-long" size={40} color={themeColors.icon} />
-                  <Text variant="bodyMedium" style={{ color: themeColors.icon, marginTop: Spacing.sm }}>
+                  <MaterialIcons name="receipt-long" size={ICON_SIZE.xxl} color={themeColors.icon} />
+                  <Text variant="bodyMedium" style={{ color: themeColors.icon, marginTop: SPACING.sm }}>
                     No transactions today
                   </Text>
                 </View>
@@ -294,7 +341,7 @@ export default function HomeScreen() {
                     onPress={() => {
                       const account = accounts.find(a => a.accountNo.includes(tx.accountNo) || tx.accountNo.includes(a.accountNo));
                       if (account) {
-                        router.push({ pathname: '/screens/TransactionsScreen', params: { accountId: account.id, bankName: account.bankName, accountNo: account.accountNo } });
+                        router.push({ pathname: '/(protected)/transaction', params: { accountId: account.id, bankName: account.bankName, accountNo: account.accountNo } });
                       }
                     }}
                   />
@@ -306,7 +353,7 @@ export default function HomeScreen() {
                   <Text style={[styles.viewAllText, { color: themeColors.primary }]}>
                     View All ({allTodayTransactions.length} transactions)
                   </Text>
-                  <MaterialIcons name="chevron-right" size={20} color={themeColors.primary} />
+                  <MaterialIcons name="chevron-right" size={ICON_SIZE.md} color={themeColors.primary} />
                 </TouchableOpacity>
               )}
             </>
@@ -317,7 +364,7 @@ export default function HomeScreen() {
           icon="cog"
           color={themeColors.background}
           style={[styles.fab, { backgroundColor: '#1f2937' }]}
-          onPress={() => router.push('/screens/SetupScreen')}
+          onPress={() => router.push('/(protected)/setup')}
         />
       </View>
     </SafeAreaView>
@@ -332,27 +379,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: 80,
+    padding: SPACING.screenPadding,
+    paddingBottom: SPACING.xxxl * 2,
   },
   headerContainer: {
-    marginBottom: Spacing.lg,
+    marginBottom: SPACING.lg,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: SPACING.sm,
   },
   logoContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
+    width: COMPONENT_SIZE.appIconSize,
+    height: COMPONENT_SIZE.appIconSize,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
     backgroundColor: '#fff',
   },
   appIcon: {
-    width: 44,
-    height: 44,
+    width: COMPONENT_SIZE.appIconSize,
+    height: COMPONENT_SIZE.appIconSize,
     resizeMode: 'contain',
   },
   headerTextContainer: {
@@ -361,40 +408,47 @@ const styles = StyleSheet.create({
   header: {
     fontWeight: '800',
     fontFamily: FontFamily.extraBold,
-    fontSize: 22,
+    fontSize: FONT_SIZE.xxl,
   },
   subtitle: {
     opacity: 0.6,
-    fontSize: 12,
+    fontSize: FONT_SIZE.sm,
     fontFamily: FontFamily.regular,
   },
   refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
+    width: ICON_SIZE.xxl,
+    height: ICON_SIZE.xxl,
+    borderRadius: RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyCard: {
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.xl,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
     alignItems: 'center',
-    marginTop: Spacing.xxl,
+    marginTop: SPACING.xxl,
   },
   emptyTitle: {
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
+    fontSize: FONT_SIZE.xxl
   },
   emptyText: {
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: SPACING.lg,
+    fontSize: FONT_SIZE.md
   },
   emptyButton: {
-    marginTop: Spacing.sm,
+    marginTop: SPACING.sm,
+    borderRadius: RADIUS.md,
+  },
+  emptyButtonLabel: {
+    fontSize: FONT_SIZE.md,
+    fontFamily: FontFamily.semiBold,
   },
   fab: {
     position: 'absolute',
-    margin: Spacing.md,
+    margin: SPACING.screenPadding,
     right: 0,
     bottom: 0,
   },
@@ -402,25 +456,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   sectionTitle: {
     fontWeight: '700',
     fontFamily: FontFamily.bold,
+    fontSize: FONT_SIZE.lg,
   },
   countBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs / 2,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs / 2,
+    borderRadius: RADIUS.rounded,
   },
   countText: {
-    fontSize: 12,
+    fontSize: FONT_SIZE.sm,
     fontWeight: '600',
   },
   emptyTransactions: {
-    borderRadius: BorderRadius.md,
-    padding: Spacing.xl,
+    borderRadius: RADIUS.md,
+    padding: SPACING.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -428,14 +483,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    marginTop: Spacing.sm,
-    gap: Spacing.xs,
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
   },
   viewAllText: {
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: FONT_SIZE.md,
+    fontFamily: FontFamily.semiBold,
+  },
+  permissionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  permissionBannerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  permissionBannerText: {
+    flex: 1,
+  },
+  permissionBannerTitle: {
+    fontFamily: FontFamily.semiBold,
+    marginBottom: SPACING.xs / 2,
+  },
+  permissionBannerButton: {
+    borderRadius: RADIUS.sm,
+  },
+  permissionBannerButtonLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontFamily: FontFamily.semiBold,
   },
 });

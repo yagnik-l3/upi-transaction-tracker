@@ -12,12 +12,11 @@ import Toast from 'react-native-toast-message';
 import { DATABASE_NAME } from '@/constants';
 import { FontFamily } from '@/constants/theme';
 import { db } from '@/db';
+import migrations from "@/db/drizzle/migrations";
 import { seedDefaultBanks } from '@/db/seed';
+import { OnboardingProvider, useOnboarding } from '@/hooks/context';
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { SQLiteProvider } from 'expo-sqlite';
-import migrations from "../db/drizzle/migrations";
-import { registerForPushNotificationsAsync } from './services/notifications';
-import { requestSmsPermission } from './services/smsReader';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -53,8 +52,9 @@ const lightNavigationTheme = {
   },
 };
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const { success, error } = useMigrations(db, migrations);
+  const { hasOnboarded, isLoading } = useOnboarding();
 
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -68,28 +68,18 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Request permissions on app startup
-    const requestPermissions = async () => {
-      try {
-        await requestSmsPermission();
-        await registerForPushNotificationsAsync();
-      } catch (error) {
-        console.error('Error requesting permissions:', error);
-      }
-    };
-
-    requestPermissions();
-  }, []);
-
-  useEffect(() => {
-    if (fontsLoaded && success) {
+    if (fontsLoaded && success && !isLoading) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, success]);
+  }, [fontsLoaded, success, isLoading]);
+
+  useEffect(() => {
+    console.log("has-onboarded", hasOnboarded)
+  }, [hasOnboarded])
 
   // Show loading while migrations are running or fonts loading
-  if (!success || !fontsLoaded) {
-    return <ActivityIndicator size="large" style={{ flex: 1, justifyContent: 'center', backgroundColor: '#f9fafb' }} />;
+  if (!success || !fontsLoaded || isLoading) {
+    return <ActivityIndicator size="large" color='#1f2937' style={{ flex: 1, justifyContent: 'center', backgroundColor: '#f9fafb', }} />;
   }
 
   if (error) {
@@ -112,12 +102,17 @@ export default function RootLayout() {
         >
           <PaperProvider theme={customTheme}>
             <ThemeProvider value={lightNavigationTheme}>
+
               <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="screens/SetupScreen" />
-                <Stack.Screen name="screens/TransactionsScreen" />
-                <Stack.Screen name="screens/EditAccountScreen" />
+                <Stack.Protected guard={hasOnboarded}>
+                  <Stack.Screen name="(protected)" />
+                </Stack.Protected>
+
+                <Stack.Protected guard={!hasOnboarded}>
+                  <Stack.Screen name="onboarding" />
+                </Stack.Protected>
               </Stack>
+
               <StatusBar style="dark" />
             </ThemeProvider>
           </PaperProvider>
@@ -125,5 +120,13 @@ export default function RootLayout() {
         <Toast />
       </Suspense>
     </GestureHandlerRootView>
+  )
+}
+
+export default function RootLayout() {
+  return (
+    <OnboardingProvider>
+      <RootLayoutNav />
+    </OnboardingProvider>
   );
 }

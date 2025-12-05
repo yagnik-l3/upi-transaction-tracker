@@ -1,4 +1,5 @@
-import { BorderRadius, Colors, FontFamily, Spacing } from '@/constants/theme';
+import { FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
+import { Colors, FontFamily } from '@/constants/theme';
 import { SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -92,15 +93,15 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        marginBottom: Spacing.sm,
-        gap: Spacing.md,
+        padding: SPACING.md,
+        borderRadius: RADIUS.md,
+        marginBottom: SPACING.sm,
+        gap: SPACING.md,
     },
     iconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.full,
+        width: ICON_SIZE.xxl,
+        height: ICON_SIZE.xxl,
+        borderRadius: RADIUS.rounded,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -111,9 +112,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontFamily: FontFamily.semiBold,
         marginBottom: 2,
+        fontSize: FONT_SIZE.md,
     },
     time: {
-        fontSize: 12,
+        fontSize: FONT_SIZE.sm,
     },
     amountContainer: {
         alignItems: 'flex-end',
@@ -121,15 +123,16 @@ const styles = StyleSheet.create({
     amount: {
         fontWeight: '700',
         fontFamily: FontFamily.bold,
+        fontSize: FONT_SIZE.lg,
     },
     categoryBadge: {
-        paddingHorizontal: Spacing.sm,
+        paddingHorizontal: SPACING.sm,
         paddingVertical: 2,
-        borderRadius: BorderRadius.sm,
-        marginTop: 4,
+        borderRadius: RADIUS.sm,
+        marginTop: SPACING.xs,
     },
     categoryText: {
-        fontSize: 10,
+        fontSize: FONT_SIZE.xs,
         fontWeight: '600',
     },
 });

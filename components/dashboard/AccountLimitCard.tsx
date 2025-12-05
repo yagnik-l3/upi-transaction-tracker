@@ -1,4 +1,5 @@
-import { BorderRadius, Colors, Elevation, FontFamily, Spacing } from '@/constants/theme';
+import { COMPONENT_SIZE, FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
+import { Colors, Elevation, FontFamily } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
@@ -130,21 +131,21 @@ export const AccountLimitCard: React.FC<AccountLimitCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.md,
-        marginBottom: Spacing.sm,
+        borderRadius: RADIUS.lg,
+        padding: SPACING.md,
+        marginBottom: SPACING.sm,
         borderLeftWidth: 4,
     },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: Spacing.md,
-        gap: Spacing.sm,
+        marginBottom: SPACING.md,
+        gap: SPACING.sm,
     },
     iconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: BorderRadius.md,
+        width: COMPONENT_SIZE.appIconSize,
+        height: COMPONENT_SIZE.appIconSize,
+        borderRadius: RADIUS.md,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -154,34 +155,36 @@ const styles = StyleSheet.create({
     accountName: {
         fontWeight: '600',
         fontFamily: FontFamily.semiBold,
+        fontSize: FONT_SIZE.lg,
     },
     bankName: {
         opacity: 0.7,
         marginTop: 2,
+        fontSize: FONT_SIZE.sm,
     },
     statusBadge: {
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs,
-        borderRadius: BorderRadius.sm,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: SPACING.xs,
+        borderRadius: RADIUS.sm,
     },
     statusText: {
         fontWeight: '600',
-        fontSize: 10,
+        fontSize: FONT_SIZE.xs,
         textTransform: 'uppercase',
     },
     editButton: {
-        width: 32,
-        height: 32,
-        borderRadius: BorderRadius.sm,
+        width: ICON_SIZE.xl,
+        height: ICON_SIZE.xl,
+        borderRadius: RADIUS.sm,
         justifyContent: 'center',
         alignItems: 'center',
-        marginLeft: Spacing.xs,
+        marginLeft: SPACING.xs,
     },
     amountRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: Spacing.sm,
+        marginBottom: SPACING.sm,
     },
     amountContainer: {
         flex: 1,
@@ -189,34 +192,35 @@ const styles = StyleSheet.create({
     amount: {
         fontWeight: '700',
         fontFamily: FontFamily.bold,
+        fontSize: FONT_SIZE.xxl,
     },
     comparisonBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs,
-        borderRadius: BorderRadius.sm,
-        gap: 4,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: SPACING.xs,
+        borderRadius: RADIUS.sm,
+        gap: SPACING.xs,
     },
     comparisonText: {
-        fontSize: 12,
+        fontSize: FONT_SIZE.sm,
         fontWeight: '600',
     },
     progressContainer: {
-        marginTop: Spacing.xs,
+        marginTop: SPACING.xs,
     },
     progressTrack: {
         height: 6,
-        borderRadius: BorderRadius.full,
+        borderRadius: RADIUS.rounded,
         overflow: 'hidden',
-        marginBottom: Spacing.xs,
+        marginBottom: SPACING.xs,
     },
     progressFill: {
         height: '100%',
-        borderRadius: BorderRadius.full,
+        borderRadius: RADIUS.rounded,
     },
     progressText: {
         textAlign: 'right',
-        fontSize: 11,
+        fontSize: FONT_SIZE.xs,
     },
 });

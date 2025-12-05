@@ -1,4 +1,5 @@
-import { BorderRadius, Colors, FontFamily, Spacing } from '@/constants/theme';
+import { FONT_SIZE, RADIUS, SPACING } from '@/constants/scaling';
+import { Colors, FontFamily } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -92,17 +93,17 @@ export const TotalKharchaCard: React.FC<TotalKharchaCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.lg,
-        marginBottom: Spacing.md,
+        borderRadius: RADIUS.lg,
+        padding: SPACING.lg,
+        marginBottom: SPACING.md,
     },
     header: {
-        marginBottom: Spacing.xs,
+        marginBottom: SPACING.xs,
     },
     title: {
         color: 'rgba(255, 255, 255, 0.6)',
         fontWeight: '400',
-        fontSize: 14,
+        fontSize: FONT_SIZE.md,
     },
     titleBold: {
         fontWeight: '700',
@@ -112,45 +113,45 @@ const styles = StyleSheet.create({
     amountContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing.md,
-        marginBottom: Spacing.xs,
+        gap: SPACING.md,
+        marginBottom: SPACING.xs,
     },
     amount: {
         color: '#fff',
         fontWeight: '700',
         fontFamily: FontFamily.extraBold,
-        fontSize: 36,
+        fontSize: FONT_SIZE.display,
     },
     trendBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs,
-        borderRadius: BorderRadius.full,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: SPACING.xs,
+        borderRadius: RADIUS.rounded,
         gap: 2,
     },
     trendText: {
-        fontSize: 13,
+        fontSize: FONT_SIZE.sm,
         fontWeight: '600',
         fontFamily: FontFamily.semiBold,
     },
     comparisonText: {
         color: 'rgba(255, 255, 255, 0.5)',
-        fontSize: 13,
-        marginBottom: Spacing.md,
+        fontSize: FONT_SIZE.sm,
+        marginBottom: SPACING.md,
     },
     divider: {
         height: 1,
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        marginVertical: Spacing.sm,
+        marginVertical: SPACING.sm,
     },
     refreshRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing.xs,
+        gap: SPACING.xs,
     },
     refreshText: {
         color: 'rgba(255, 255, 255, 0.5)',
-        fontSize: 12,
+        fontSize: FONT_SIZE.sm,
     },
 });
