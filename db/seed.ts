@@ -3,22 +3,9 @@ import * as bankQueries from './queries/bank';
 const DEFAULT_BANKS = [
     'SBI',
     'HDFC',
-    'ICICI',
-    'Axis',
     'Kotak',
-    'PNB',
     'BOB',
-    'Canara',
-    'Union',
-    'IDBI',
-    'IndusInd',
-    'Yes Bank',
-    'Federal',
     'RBL',
-    'IDFC First',
-    'Paytm Payments Bank',
-    'Airtel Payments Bank',
-    'Jio Payments Bank',
 ];
 
 export async function seedDefaultBanks() {

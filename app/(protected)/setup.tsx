@@ -1,3 +1,4 @@
+import { CustomButton, CustomInput } from '@/components/ui';
 import { COMPONENT_SIZE, FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
 import { Colors, Elevation, FontFamily } from '@/constants/theme';
 import { CARD_COLORS, CARD_ICONS, SelectBank } from '@/db/schema';
@@ -5,8 +6,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Card, IconButton, Menu, Text, TextInput } from 'react-native-paper';
+import { FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Card, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import * as accountQueries from '../../db/queries/account';
@@ -108,65 +109,91 @@ export default function SetupScreen() {
                         </View>
 
                         <View style={styles.dropdownContainer}>
-                            <Menu
-                                visible={menuVisible}
-                                onDismiss={() => setMenuVisible(false)}
-                                anchor={
-                                    <Button
-                                        mode="outlined"
-                                        onPress={() => setMenuVisible(true)}
-                                        textColor={themeColors.text}
-                                        style={[styles.selectButton, { borderColor: themeColors.cardBorder }]}
-                                        icon="chevron-down"
-                                        contentStyle={styles.selectButtonContent}
-                                    >
-                                        {selectedBank ? selectedBank.name : 'Select Bank'}
-                                    </Button>
-                                }
+                            <TouchableOpacity
+                                onPress={() => setMenuVisible(true)}
+                                style={[
+                                    styles.dropdownButton,
+                                    { borderColor: themeColors.cardBorder, backgroundColor: themeColors.card }
+                                ]}
                             >
-                                {banks.map((bank) => (
-                                    <Menu.Item
-                                        key={bank.id}
-                                        onPress={() => {
-                                            setSelectedBank(bank);
-                                            setMenuVisible(false);
-                                        }}
-                                        title={bank.name}
-                                    />
-                                ))}
-                            </Menu>
+                                <MaterialIcons name="account-balance" size={ICON_SIZE.md} color={themeColors.icon} />
+                                <Text style={[styles.dropdownButtonText, { color: selectedBank ? themeColors.text : themeColors.icon }]}>
+                                    {selectedBank ? selectedBank.name : 'Select Bank'}
+                                </Text>
+                                <MaterialIcons name="keyboard-arrow-down" size={ICON_SIZE.md} color={themeColors.icon} />
+                            </TouchableOpacity>
+
+                            <Modal
+                                visible={menuVisible}
+                                transparent
+                                animationType="fade"
+                                onRequestClose={() => setMenuVisible(false)}
+                            >
+                                <TouchableOpacity
+                                    style={styles.modalOverlay}
+                                    activeOpacity={1}
+                                    onPress={() => setMenuVisible(false)}
+                                >
+                                    <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>
+                                        <Text variant="titleMedium" style={[styles.modalTitle, { color: themeColors.text }]}>
+                                            Select Bank
+                                        </Text>
+                                        <FlatList
+                                            data={banks}
+                                            keyExtractor={(item) => item.id.toString()}
+                                            renderItem={({ item }) => (
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.modalItem,
+                                                        selectedBank?.id === item.id && { backgroundColor: selectedColor + '20' }
+                                                    ]}
+                                                    onPress={() => {
+                                                        setSelectedBank(item);
+                                                        setMenuVisible(false);
+                                                    }}
+                                                >
+                                                    <Text style={[
+                                                        styles.modalItemText,
+                                                        { color: themeColors.text },
+                                                        selectedBank?.id === item.id && { color: selectedColor, fontWeight: '600' }
+                                                    ]}>
+                                                        {item.name}
+                                                    </Text>
+                                                    {selectedBank?.id === item.id && (
+                                                        <MaterialIcons name="check" size={ICON_SIZE.md} color={selectedColor} />
+                                                    )}
+                                                </TouchableOpacity>
+                                            )}
+                                            style={styles.modalList}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </Modal>
                         </View>
 
-                        <TextInput
-                            label="Friendly Name (e.g., Salary Account)"
+                        <CustomInput
+                            label="Friendly Name"
+                            placeholder="e.g., Salary Account"
                             value={friendlyName}
                             onChangeText={setFriendlyName}
-                            mode="outlined"
-                            style={styles.input}
-                            left={<TextInput.Icon icon="account-circle" size={ICON_SIZE.md} />}
-                            outlineColor={themeColors.cardBorder}
-                            activeOutlineColor={themeColors.text}
+                            icon="person"
                         />
-                        <TextInput
-                            label="Last 4 Digit of Account Number"
+                        <CustomInput
+                            label="Last 4 Digits of Account Number"
+                            placeholder="e.g., 1234"
                             value={accountNo}
                             onChangeText={setAccountNo}
-                            mode="outlined"
-                            style={styles.input}
-                            left={<TextInput.Icon icon="account-circle" size={ICON_SIZE.md} />}
-                            outlineColor={themeColors.cardBorder}
-                            activeOutlineColor={themeColors.text}
+                            icon="credit-card"
+                            keyboardType="numeric"
+                            maxLength={4}
                         />
-                        <TextInput
-                            label="Daily UPI Limit (e.g., 100000)"
+                        <CustomInput
+                            label="Daily UPI Limit"
+                            placeholder="e.g., 100000"
                             value={upiLimit}
                             onChangeText={setUpiLimit}
                             keyboardType="numeric"
-                            mode="outlined"
-                            style={styles.input}
-                            left={<TextInput.Icon icon="currency-inr" size={ICON_SIZE.md} />}
-                            outlineColor={themeColors.cardBorder}
-                            activeOutlineColor={themeColors.text}
+                            icon="currency-rupee"
                         />
 
                         {/* Card Color Selection */}
@@ -237,16 +264,13 @@ export default function SetupScreen() {
                             </View>
                         </View>
 
-                        <Button
-                            mode="contained"
+                        <CustomButton
+                            title="Add Account"
                             onPress={handleAddAccount}
-                            style={[styles.button, { backgroundColor: selectedColor }]}
-                            labelStyle={styles.buttonLabel}
+                            color={selectedColor}
                             disabled={banks.length === 0}
                             icon="check"
-                        >
-                            Add Account
-                        </Button>
+                        />
                         {banks.length === 0 && (
                             <Text variant="bodySmall" style={[styles.helpText, { color: themeColors.warning }]}>
                                 Please add a bank first before creating an account
@@ -318,27 +342,52 @@ const styles = StyleSheet.create({
         marginLeft: SPACING.xs,
         fontSize: FONT_SIZE.lg,
     },
-    input: {
-        marginBottom: SPACING.md,
-    },
-    button: {
-        marginTop: SPACING.md,
-        borderRadius: RADIUS.md,
-    },
-    buttonLabel: {
-        fontSize: FONT_SIZE.md,
-        fontFamily: FontFamily.semiBold,
-    },
     dropdownContainer: {
         marginBottom: SPACING.md,
     },
-    selectButton: {
+    dropdownButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: RADIUS.md,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.md,
+        gap: SPACING.sm,
+    },
+    dropdownButtonText: {
+        flex: 1,
+        fontSize: FONT_SIZE.md,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: SPACING.lg,
+    },
+    modalContent: {
+        width: '100%',
+        maxHeight: '60%',
+        borderRadius: RADIUS.lg,
+        padding: SPACING.md,
+    },
+    modalTitle: {
+        fontWeight: '600',
+        marginBottom: SPACING.md,
+        textAlign: 'center',
+    },
+    modalList: {
+        flexGrow: 0,
+    },
+    modalItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: SPACING.md,
+        paddingHorizontal: SPACING.md,
         borderRadius: RADIUS.md,
     },
-    selectButtonContent: {
-        flexDirection: 'row-reverse',
-    },
-    selectButtonLabel: {
+    modalItemText: {
         fontSize: FONT_SIZE.md,
     },
     helpText: {

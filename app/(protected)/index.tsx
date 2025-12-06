@@ -8,10 +8,8 @@ import { CARD_COLORS, CARD_ICONS, InsertAccount, InsertTransaction, SelectAccoun
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { FAB, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,16 +23,12 @@ interface AccountWithStats extends SelectAccount {
 }
 
 export default function HomeScreen() {
-  const expoDb = useSQLiteContext();
-
-  // **Provide the access of your SQLite DB to the Drizzle Studio***
-  useDrizzleStudio(expoDb);
-
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [accounts, setAccounts] = useState<AccountWithStats[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
+  const isMountedRef = useRef(true);
   // const [hasSmsPermission, setHasSmsPermission] = useState<boolean>(hasOnboarded);
 
   // Request SMS permission
@@ -70,8 +64,12 @@ export default function HomeScreen() {
 
 
   const loadData = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
     try {
       const fetchedAccounts = await accountQueries.findAll({});
+      if (!isMountedRef.current) return;
+
       const today = format(new Date(), 'yyyy-MM-dd');
 
       const accountsWithStats = await Promise.all(fetchedAccounts.map(async (acc) => {
@@ -83,13 +81,16 @@ export default function HomeScreen() {
         return { ...acc, dailyTotal, yesterdayTotal, todayTransactions };
       }));
 
+      if (!isMountedRef.current) return;
+
       // Load last refresh time
       const savedRefreshTime = await settingQueries.getLastRefreshTime();
-      setLastRefreshTime(savedRefreshTime);
+      if (!isMountedRef.current) return;
 
+      setLastRefreshTime(savedRefreshTime);
       setAccounts(accountsWithStats);
     } catch (e) {
-      console.error(e);
+      console.error('Error loading data:', e);
     }
   }, [])
 
@@ -187,20 +188,36 @@ export default function HomeScreen() {
 
   // Handle refresh with SMS reading (only if permission granted)
   const handleRefresh = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
     try {
       setRefreshing(true);
       await onRefresh();
     } catch (error) {
-      console.error(error);
+      console.error('Error refreshing:', error);
     } finally {
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setRefreshing(false);
+      }
     }
   }, []);
 
   // Load data on focus
   useFocusEffect(
     useCallback(() => {
-      handleRefresh();
+      isMountedRef.current = true;
+
+      // Small delay to ensure database is ready after navigation
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current) {
+          handleRefresh();
+        }
+      }, 100);
+
+      return () => {
+        isMountedRef.current = false;
+        clearTimeout(timeoutId);
+      };
     }, [handleRefresh])
   );
 
@@ -260,7 +277,7 @@ export default function HomeScreen() {
             </View>
           )} */}
 
-          {accounts.length === 0 ? (
+          {accounts.length === 0 && !refreshing ? (
             <View style={[styles.emptyCard, { backgroundColor: themeColors.card, ...Elevation.md }]}>
               <IconButton icon="bank-off" size={ICON_SIZE.xxxl} iconColor={themeColors.icon} />
               <Text variant="titleLarge" style={[styles.emptyTitle, { color: themeColors.text }]}>

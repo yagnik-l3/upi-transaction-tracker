@@ -1,3 +1,4 @@
+import { CustomButton, CustomInput } from '@/components/ui';
 import { COMPONENT_SIZE, FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
 import { Colors, Elevation, FontFamily } from '@/constants/theme';
 import { CARD_COLORS, CARD_ICONS, SelectAccount } from '@/db/schema';
@@ -6,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Card, Text, TextInput } from 'react-native-paper';
+import { Card, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import * as accountQueries from '../../db/queries/account';
@@ -191,36 +192,29 @@ export default function EditAccountScreen() {
                             </Text>
                         </View>
 
-                        <TextInput
+                        <CustomInput
                             label="Friendly Name"
+                            placeholder="e.g., Salary Account"
                             value={friendlyName}
                             onChangeText={setFriendlyName}
-                            mode="outlined"
-                            style={styles.input}
-                            left={<TextInput.Icon icon="account-circle" size={ICON_SIZE.md} />}
-                            outlineColor={themeColors.cardBorder}
-                            activeOutlineColor={themeColors.text}
+                            icon="person"
                         />
-                        <TextInput
+                        <CustomInput
                             label="Last 4 Digits of Account Number"
+                            placeholder="e.g., 1234"
                             value={accountNo}
                             onChangeText={setAccountNo}
-                            mode="outlined"
-                            style={styles.input}
-                            left={<TextInput.Icon icon="credit-card" size={ICON_SIZE.md} />}
-                            outlineColor={themeColors.cardBorder}
-                            activeOutlineColor={themeColors.text}
+                            icon="credit-card"
+                            keyboardType="numeric"
+                            maxLength={4}
                         />
-                        <TextInput
+                        <CustomInput
                             label="Daily UPI Limit"
+                            placeholder="e.g., 100000"
                             value={upiLimit}
                             onChangeText={setUpiLimit}
                             keyboardType="numeric"
-                            mode="outlined"
-                            style={styles.input}
-                            left={<TextInput.Icon icon="currency-inr" size={ICON_SIZE.md} />}
-                            outlineColor={themeColors.cardBorder}
-                            activeOutlineColor={themeColors.text}
+                            icon="currency-rupee"
                         />
 
                         {/* Card Color Selection */}
@@ -291,15 +285,12 @@ export default function EditAccountScreen() {
                             </View>
                         </View>
 
-                        <Button
-                            mode="contained"
+                        <CustomButton
+                            title="Save Changes"
                             onPress={handleUpdateAccount}
-                            style={[styles.button, { backgroundColor: selectedColor }]}
-                            labelStyle={styles.buttonLabel}
+                            color={selectedColor}
                             icon="check"
-                        >
-                            Save Changes
-                        </Button>
+                        />
                     </Card.Content>
                 </Card>
 
@@ -374,17 +365,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontFamily: FontFamily.semiBold,
         fontSize: FONT_SIZE.lg,
-    },
-    input: {
-        marginBottom: SPACING.md,
-    },
-    button: {
-        marginTop: SPACING.md,
-        borderRadius: RADIUS.md,
-    },
-    buttonLabel: {
-        fontSize: FONT_SIZE.md,
-        fontFamily: FontFamily.semiBold,
     },
     sectionLabel: {
         fontWeight: '600',

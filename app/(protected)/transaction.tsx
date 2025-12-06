@@ -1,3 +1,4 @@
+import { CustomButton, CustomInput } from '@/components/ui';
 import { FONT_SIZE, ICON_SIZE, RADIUS, SPACING } from '@/constants/scaling';
 import { Colors, FontFamily } from '@/constants/theme';
 import * as transactionQueries from '@/db/queries/transaction';
@@ -11,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, LayoutAnimation, Platform, TextInput as RNTextInput, StyleSheet, TouchableOpacity, UIManager, View } from 'react-native';
-import { ActivityIndicator, Chip, FAB, Portal, Text, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Chip, FAB, Portal, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -56,9 +57,12 @@ export default function TransactionsScreen() {
     });
 
     useEffect(() => {
-        setIsLoading(true)
-        loadTransactions();
-        setIsLoading(false)
+        const fetchData = async () => {
+            setIsLoading(true);
+            await loadTransactions();
+            setIsLoading(false);
+        };
+        fetchData();
     }, [accountNo, bankName]);
 
     useEffect(() => {
@@ -79,9 +83,7 @@ export default function TransactionsScreen() {
     }, []);
 
     useEffect(() => {
-        setIsLoading(true)
         applyFilters();
-        setIsLoading(false)
     }, [transactions, searchQuery, dateFilter]);
 
     const loadTransactions = async () => {
@@ -565,44 +567,36 @@ export default function TransactionsScreen() {
 
                             <BottomSheetScrollView style={styles.sheetBody}>
                                 <View style={styles.inputGroup}>
-                                    <TextInput
-                                        label="Friendly Name (e.g., Salary Account)"
+                                    <CustomInput
+                                        label="Receiver Name"
+                                        placeholder="e.g., Swiggy, Amazon"
                                         value={newTransaction.receiver}
                                         onChangeText={(text) => setNewTransaction({ ...newTransaction, receiver: text })}
-                                        mode="outlined"
-                                        style={styles.input}
-                                        left={<TextInput.Icon icon="account-circle" />}
-                                        outlineColor={themeColors.cardBorder}
-                                        activeOutlineColor={themeColors.text}
+                                        icon="person"
                                     />
-                                    <TextInput
+                                    <CustomInput
                                         label="Amount"
+                                        placeholder="e.g., 500"
                                         value={newTransaction.amount}
                                         onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
-                                        mode="outlined"
-                                        style={styles.input}
-                                        left={<TextInput.Icon icon="currency-inr" />}
-                                        outlineColor={themeColors.cardBorder}
-                                        activeOutlineColor={themeColors.text}
+                                        keyboardType="numeric"
+                                        icon="currency-rupee"
                                     />
-                                    <TextInput
+                                    <CustomInput
                                         label="Reference (Optional)"
+                                        placeholder="e.g., Order #12345"
                                         value={newTransaction.reference}
                                         onChangeText={(text) => setNewTransaction({ ...newTransaction, reference: text })}
-                                        mode="outlined"
-                                        style={styles.input}
-                                        left={<TextInput.Icon icon="receipt" />}
-                                        outlineColor={themeColors.cardBorder}
-                                        activeOutlineColor={themeColors.text}
+                                        icon="receipt"
                                     />
                                 </View>
 
-                                <TouchableOpacity
-                                    style={[styles.addButton, { backgroundColor: themeColors.text }]}
+                                <CustomButton
+                                    title="Add Transaction"
                                     onPress={handleAddTransaction}
-                                >
-                                    <Text style={styles.addButtonText}>Add Transaction</Text>
-                                </TouchableOpacity>
+                                    variant="secondary"
+                                    icon="add"
+                                />
                             </BottomSheetScrollView>
                         </BottomSheet>
                     </>)}
@@ -832,22 +826,6 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.md,
         fontWeight: '600',
         marginBottom: SPACING.xs,
-    },
-    input: {
-        marginBottom: SPACING.md,
-    },
-    addButton: {
-        padding: SPACING.md,
-        borderRadius: RADIUS.md,
-        alignItems: 'center',
-        marginTop: SPACING.md,
-        justifyContent: 'center',
-    },
-    addButtonText: {
-        color: "#f9fafb",
-        fontSize: FONT_SIZE.md,
-        fontWeight: '600',
-        fontFamily: FontFamily.semiBold,
     },
     filterContainer: {
         flexDirection: 'row',

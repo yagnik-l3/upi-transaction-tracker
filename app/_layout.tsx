@@ -1,6 +1,6 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense, useEffect } from 'react';
@@ -9,14 +9,12 @@ import { ActivityIndicator, MD3LightTheme, PaperProvider, configureFonts } from 
 import 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
-import { DATABASE_NAME } from '@/constants';
 import { FontFamily } from '@/constants/theme';
 import { db } from '@/db';
 import migrations from "@/db/drizzle/migrations";
 import { seedDefaultBanks } from '@/db/seed';
 import { OnboardingProvider, useOnboarding } from '@/hooks/context';
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
-import { SQLiteProvider } from 'expo-sqlite';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -55,6 +53,8 @@ const lightNavigationTheme = {
 function RootLayoutNav() {
   const { success, error } = useMigrations(db, migrations);
   const { hasOnboarded, isLoading } = useOnboarding();
+  const router = useRouter();
+  const segments = useSegments();
 
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -68,18 +68,38 @@ function RootLayoutNav() {
   });
 
   useEffect(() => {
-    if (fontsLoaded && success && !isLoading) {
-      SplashScreen.hideAsync();
-    }
+    const init = async () => {
+      if (fontsLoaded && success && !isLoading) {
+        try {
+          // Seed default banks after migrations complete
+          await seedDefaultBanks();
+        } catch (e) {
+          console.error('Seed error:', e);
+        }
+        SplashScreen.hideAsync();
+      }
+    };
+    init();
   }, [fontsLoaded, success, isLoading]);
 
+  // Handle navigation based on onboarding state
   useEffect(() => {
-    console.log("has-onboarded", hasOnboarded)
-  }, [hasOnboarded])
+    if (isLoading || !fontsLoaded || !success) return;
+
+    const inProtectedGroup = segments[0] === '(protected)';
+
+    if (hasOnboarded && !inProtectedGroup) {
+      // User has onboarded but is not in protected area, redirect to home
+      router.replace('/(protected)');
+    } else if (!hasOnboarded && inProtectedGroup) {
+      // User hasn't onboarded but is in protected area, redirect to onboarding
+      router.replace('/onboarding');
+    }
+  }, [hasOnboarded, isLoading, fontsLoaded, success, segments])
 
   // Show loading while migrations are running or fonts loading
   if (!success || !fontsLoaded || isLoading) {
-    return <ActivityIndicator size="large" color='#1f2937' style={{ flex: 1, justifyContent: 'center', backgroundColor: '#f9fafb', }} />;
+    return <ActivityIndicator size="small" color='#1f2937' style={{ flex: 1, justifyContent: 'center', backgroundColor: '#f9fafb', }} />;
   }
 
   if (error) {
@@ -88,35 +108,18 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Suspense fallback={<ActivityIndicator size="large" />}>
-        <SQLiteProvider
-          databaseName={DATABASE_NAME}
-          onInit={async () => {
-            try {
-              // Seed default banks
-              await seedDefaultBanks();
-            } catch (error) {
-              console.error("Migration error", error);
-            }
-          }}
-        >
-          <PaperProvider theme={customTheme}>
-            <ThemeProvider value={lightNavigationTheme}>
+      <Suspense fallback={<ActivityIndicator size="small" color='#1f2937' style={{ flex: 1, justifyContent: 'center', backgroundColor: '#f9fafb', }} />}>
+        <PaperProvider theme={customTheme}>
+          <ThemeProvider value={lightNavigationTheme}>
 
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Protected guard={hasOnboarded}>
-                  <Stack.Screen name="(protected)" />
-                </Stack.Protected>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(protected)" />
+              <Stack.Screen name="onboarding" />
+            </Stack>
 
-                <Stack.Protected guard={!hasOnboarded}>
-                  <Stack.Screen name="onboarding" />
-                </Stack.Protected>
-              </Stack>
-
-              <StatusBar style="dark" />
-            </ThemeProvider>
-          </PaperProvider>
-        </SQLiteProvider>
+            <StatusBar style="dark" />
+          </ThemeProvider>
+        </PaperProvider>
         <Toast />
       </Suspense>
     </GestureHandlerRootView>

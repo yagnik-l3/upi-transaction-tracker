@@ -1,21 +1,19 @@
+import { CustomButton } from '@/components/ui';
 import { FONT_SIZE, ICON_SIZE, RADIUS, SPACING, scaleSize } from '@/constants/scaling';
 import { Colors, FontFamily } from '@/constants/theme';
 import { useOnboarding } from '@/hooks/context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { PermissionsAndroid, Platform, StyleSheet, View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OnboardingScreen() {
     const colorScheme = useColorScheme();
-    const { completeOnboarding, hasOnboarded } = useOnboarding();
+    const { completeOnboarding } = useOnboarding();
     const themeColors = Colors[colorScheme ?? 'light'];
-    const router = useRouter();
-
     const [permission, setPermissions] = useState<boolean>(false);
 
     const requestSmsPermission = async (): Promise<boolean> => {
@@ -46,7 +44,7 @@ export default function OnboardingScreen() {
 
     const handleContinue = async () => {
         await completeOnboarding(true);
-        router.replace('/(protected)');
+        // Navigation is handled by _layout.tsx useEffect when hasOnboarded changes
     };
 
     useEffect(() => {
@@ -115,30 +113,26 @@ export default function OnboardingScreen() {
                                     </Text>
                                 </View>
                             </View>
-                            <Button
-                                mode={permission ? 'outlined' : 'contained'}
+                            <CustomButton
+                                title={permission ? 'Granted' : 'Grant Permission'}
+                                variant={permission ? 'outline' : 'primary'}
                                 onPress={() => handleRequestPermission()}
                                 disabled={permission}
-                                style={styles.permissionButton}
-                                labelStyle={styles.permissionButtonLabel}
-                            >
-                                {permission ? 'Granted' : 'Grant'}
-                            </Button>
+                                icon={permission ? 'check-circle' : 'security'}
+                            />
                         </View>
                     </Animated.View>
                 </View>
 
                 {/* Footer */}
                 <Animated.View entering={FadeInUp.delay(500).duration(500)} style={styles.footer}>
-                    <Button
-                        mode="contained"
+                    <CustomButton
+                        title="Continue to App"
                         onPress={handleContinue}
-                        style={[styles.continueButton, { backgroundColor: themeColors.primary }]}
-                        labelStyle={styles.continueButtonLabel}
                         disabled={!permission}
-                    >
-                        Continue to App
-                    </Button>
+                        icon="arrow-forward"
+                        iconPosition="right"
+                    />
                     {/* <Button
                         mode="text"
                         onPress={handleSkip}
@@ -235,23 +229,8 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.sm,
         lineHeight: FONT_SIZE.sm * 1.4,
     },
-    permissionButton: {
-        borderRadius: RADIUS.md,
-        marginTop: SPACING.md
-    },
-    permissionButtonLabel: {
-        fontFamily: FontFamily.semiBold,
-        fontSize: FONT_SIZE.md,
-    },
     footer: {
         paddingTop: SPACING.lg,
-    },
-    continueButton: {
-        borderRadius: RADIUS.md,
-    },
-    continueButtonLabel: {
-        fontFamily: FontFamily.semiBold,
-        fontSize: FONT_SIZE.md,
     },
     skipButton: {
         marginTop: SPACING.sm,
