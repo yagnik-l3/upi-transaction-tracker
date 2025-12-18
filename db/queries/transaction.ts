@@ -35,16 +35,36 @@ export async function findOne_And(data: { id?: number; accountId?: number }) {
     });
 }
 
-export async function findAll(data: { accountNo?: string, bankName?: string }) {
+export async function findAll(data: {
+    accountNo?: string,
+    bankName?: string,
+    limit?: number,
+    offset?: number,
+    startDate?: number,
+    endDate?: number
+}) {
     const conditions: SQL[] = []
+
     if (data.accountNo) {
         conditions.push(like(transactionsTable.accountNo, `%${data.accountNo}%`))
     }
     if (data.bankName) {
         conditions.push(eq(transactionsTable.bankName, data.bankName))
     }
+
+    if (data.startDate) {
+        conditions.push(gte(transactionsTable.timestamp, data.startDate));
+    }
+
+    if (data.endDate) {
+        conditions.push(lte(transactionsTable.timestamp, data.endDate));
+    }
+
     return db.query.transactionsTable.findMany({
         where: and(...conditions),
+        limit: data.limit,
+        offset: data.offset,
+        orderBy: (table, { desc }) => [desc(table.timestamp)],
     });
 }
 

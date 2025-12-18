@@ -59,11 +59,16 @@ export default function TransactionsScreen() {
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
-            await loadTransactions();
-            setIsLoading(false);
+            try {
+                await loadTransactions();
+            } catch (error) {
+                console.error('Failed to load transactions:', error);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchData();
-    }, [accountNo, bankName]);
+    }, [accountNo, bankName, dateFilter]);
 
     useEffect(() => {
         // Animate list on mount
@@ -84,18 +89,33 @@ export default function TransactionsScreen() {
 
     useEffect(() => {
         applyFilters();
-    }, [transactions, searchQuery, dateFilter]);
+    }, [transactions, searchQuery]);
 
     const loadTransactions = async () => {
+        const now = new Date();
+        let startDate: number | undefined;
+        let endDate: number | undefined;
+
+        if (dateFilter === 'today') {
+            startDate = startOfDay(now).getTime();
+            endDate = endOfDay(now).getTime();
+        } else if (dateFilter === 'week') {
+            startDate = subDays(now, 7).getTime();
+        } else if (dateFilter === 'month') {
+            startDate = subDays(now, 30).getTime();
+        }
+
         const txs = await transactionQueries.findAll({
             accountNo: accountNo as string,
-            bankName: bankName as string
+            bankName: bankName as string,
+            startDate,
+            endDate,
+            limit: 500 // Hard limit to prevent OOM
         });
         setTransactions(txs);
     };
 
     const applyFilters = () => {
-
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
         let filtered = [...transactions];
@@ -108,20 +128,6 @@ export default function TransactionsScreen() {
                 t.reference.includes(lower) ||
                 t.amount.toString().includes(lower)
             );
-        }
-
-        // Date filter
-        const now = new Date();
-        if (dateFilter === 'today') {
-            const todayStart = startOfDay(now).getTime();
-            const todayEnd = endOfDay(now).getTime();
-            filtered = filtered.filter(t => t.timestamp >= todayStart && t.timestamp <= todayEnd);
-        } else if (dateFilter === 'week') {
-            const weekStart = subDays(now, 7).getTime();
-            filtered = filtered.filter(t => t.timestamp >= weekStart);
-        } else if (dateFilter === 'month') {
-            const monthStart = subDays(now, 30).getTime();
-            filtered = filtered.filter(t => t.timestamp >= monthStart);
         }
 
         setFilteredTransactions(filtered);

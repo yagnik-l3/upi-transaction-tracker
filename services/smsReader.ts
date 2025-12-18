@@ -24,19 +24,18 @@ export const requestSmsPermission = async (): Promise<boolean> => {
     }
 };
 
-export const readSms = async (minDate: number): Promise<ParsedTransactionWithRawMessage[]> => {
+export const readSms = async (minDate: number, maxCount: number = 20, indexFrom: number = 0): Promise<{ transactions: ParsedTransactionWithRawMessage[], count: number }> => {
     return new Promise((resolve, reject) => {
         if (Platform.OS !== 'android') {
-            resolve([]);
+            resolve({ transactions: [], count: 0 });
             return;
         }
 
         const filter = {
             box: 'inbox',
             minDate, // 0 = all time
-            // maxDate: startOfNextDay,
-            // maxCount: 3, // Limit to avoid performance issues
-            indexFrom: 0
+            maxCount,
+            indexFrom
         };
 
         const tran: string[] = [];
@@ -57,7 +56,10 @@ export const readSms = async (minDate: number): Promise<ParsedTransactionWithRaw
                         transactions.push({ ...parsed, timestamp: object.date, rawMessage: object.body });
                     }
                 });
-                resolve(transactions);
+                resolve({
+                    transactions,
+                    count: arr.length
+                });
             }
         );
     });

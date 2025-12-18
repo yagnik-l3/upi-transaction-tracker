@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "UPI Ledger",
-    "slug": "upi-ledger",
+    "name": "UPI Passbook",
+    "slug": "upi-passbook",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "upiledger",
+    "scheme": "upipassbook",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -23,7 +23,8 @@
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS"
       ],
-      "package": "com.anonymous.transactiontracker"
+      "package": "com.anonymous.upipassbook",
+      "versionCode": 2
     },
     "web": {
       "output": "static",

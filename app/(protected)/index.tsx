@@ -4,7 +4,7 @@ import { Colors, Elevation, FontFamily } from '@/constants/theme';
 import * as accountQueries from '@/db/queries/account';
 import * as settingQueries from '@/db/queries/setting';
 import * as transactionQueries from '@/db/queries/transaction';
-import { CARD_COLORS, CARD_ICONS, InsertAccount, InsertTransaction, SelectAccount, SelectTransaction } from '@/db/schema';
+import { SelectAccount, SelectTransaction } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -14,7 +14,7 @@ import { Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View }
 import { FAB, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scheduleNotification } from '../../services/notifications';
-import { readSms } from '../../services/smsReader';
+import { syncSmsMessages } from '../../services/smsSyncService';
 
 interface AccountWithStats extends SelectAccount {
   dailyTotal: number;
@@ -99,64 +99,11 @@ export default function HomeScreen() {
       // Get last SMS timestamp
       const lastTimestamp = await settingQueries.getLastRefreshTime();
 
-      // Read only new SMS messages
-      const transactions = await readSms(lastTimestamp);
-      if (transactions.length > 0) {
-        // Collect unique bank+account combinations from transactions
-        const uniqueAccounts = new Map<string, { bankName: string; accountNo: string }>();
-        const txs: InsertTransaction[] = [];
+      // Read and sync new SMS messages
+      const newTransactionCount = await syncSmsMessages(lastTimestamp);
 
-        for (const tx of transactions) {
-          const key = `${tx.bankName}:${tx.accountNo}`;
-          if (!uniqueAccounts.has(key)) {
-            uniqueAccounts.set(key, { bankName: tx.bankName, accountNo: tx.accountNo });
-          }
-          txs.push({
-            bankName: tx.bankName,
-            accountNo: tx.accountNo,
-            amount: tx.amount,
-            receiver: tx.receiver,
-            reference: tx.reference,
-            date: tx.date,
-            timestamp: tx.timestamp,
-            rawMessage: tx.rawMessage
-          });
-        }
-
-        // Get existing accounts in one query
-        const existingAccounts = await accountQueries.findAll({});
-        const existingKeys = new Set(
-          existingAccounts.map(acc => `${acc.bankName}:${acc.accountNo}`)
-        );
-
-        // Create new accounts for bank+accountNo combinations that don't exist
-        const newAccounts: InsertAccount[] = [];
-        let colorIndex = existingAccounts.length;
-
-        for (const [key, accInfo] of uniqueAccounts) {
-          if (!existingKeys.has(key)) {
-            // Auto-create account with default values
-            newAccounts.push({
-              bankName: accInfo.bankName,
-              accountNo: accInfo.accountNo,
-              name: `${accInfo.bankName} ****${accInfo.accountNo.slice(-4)}`,
-              upiLimit: 100000, // Default limit
-              cardColor: CARD_COLORS[colorIndex % CARD_COLORS.length].value,
-              cardIcon: CARD_ICONS[0].value,
-            });
-            colorIndex++;
-          }
-        }
-
-        // Batch create new accounts
-        if (newAccounts.length > 0) {
-          await accountQueries.createMany(newAccounts);
-          console.log(`Auto-created ${newAccounts.length} new accounts`);
-        }
-
-        // Batch create transactions
-        await transactionQueries.createMany(txs);
-        console.log(`Added ${txs.length} new transactions`);
+      if (newTransactionCount > 0) {
+        console.log(`Synced ${newTransactionCount} new transactions`);
       }
 
       // Update last SMS timestamp
