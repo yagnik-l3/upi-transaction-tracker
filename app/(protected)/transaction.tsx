@@ -366,93 +366,69 @@ export default function TransactionsScreen() {
                     </View>
                 </View>
 
+                {/* Filter Chips */}
+                <View style={styles.filterContainer}>
+                    <Chip
+                        mode='flat'
+                        selected={dateFilter === 'all'}
+                        onPress={() => setDateFilter('all')}
+                        style={[styles.filterChip, dateFilter === 'all' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'all' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        All
+                    </Chip>
+                    <Chip
+                        selected={dateFilter === 'today'}
+                        onPress={() => setDateFilter('today')}
+                        style={[styles.filterChip, dateFilter === 'today' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'today' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        Today
+                    </Chip>
+                    <Chip
+                        selected={dateFilter === 'week'}
+                        onPress={() => setDateFilter('week')}
+                        style={[styles.filterChip, dateFilter === 'week' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'week' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        Week
+                    </Chip>
+                    <Chip
+                        selected={dateFilter === 'month'}
+                        onPress={() => setDateFilter('month')}
+                        style={[styles.filterChip, dateFilter === 'month' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
+                        textStyle={[styles.filterChipText, dateFilter === 'month' ? { color: themeColors.background } : { color: themeColors.text }]}
+                        selectedColor={themeColors.background}
+                    >
+                        Month
+                    </Chip>
+                </View>
+
+                {/* Transactions List */}
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="small" color={themeColors.text} />
                     </View>
                 ) : (
-                    <>
-                        {/* Stats Card */}
-                        <View style={[styles.statsCard, { backgroundColor: themeColors.text }]}>
-                            <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: themeColors.background }]}>
-                                    ₹{stats.totalSpent.toLocaleString('en-IN')}
+                    <FlashList
+                        data={groupedTransactions}
+                        keyExtractor={(item) => item.date}
+                        renderItem={renderGroup}
+                        contentContainerStyle={styles.listContent}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <MaterialIcons name="receipt-long" size={ICON_SIZE.xxxl} color={themeColors.icon} />
+                                <Text variant="bodyLarge" style={[styles.emptyText, { color: themeColors.icon }]}>
+                                    No transactions found
                                 </Text>
-                                <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.6)' }]}>Total Spent</Text>
                             </View>
-                            <View style={[styles.statDivider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                            <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: themeColors.background }]}>
-                                    {stats.count}
-                                </Text>
-                                <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.6)' }]}>Transactions</Text>
-                            </View>
-                            <View style={[styles.statDivider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                            <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: themeColors.background }]}>
-                                    ₹{stats.avgTransaction.toFixed(0)}
-                                </Text>
-                                <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.6)' }]}>Average</Text>
-                            </View>
-                        </View>
-
-                        {/* Filter Chips */}
-                        <View style={styles.filterContainer}>
-                            <Chip
-                                mode='flat'
-                                selected={dateFilter === 'all'}
-                                onPress={() => setDateFilter('all')}
-                                style={[styles.filterChip, dateFilter === 'all' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
-                                textStyle={[styles.filterChipText, dateFilter === 'all' ? { color: themeColors.background } : { color: themeColors.text }]}
-                                selectedColor={themeColors.background}
-                            >
-                                All
-                            </Chip>
-                            <Chip
-                                selected={dateFilter === 'today'}
-                                onPress={() => setDateFilter('today')}
-                                style={[styles.filterChip, dateFilter === 'today' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
-                                textStyle={[styles.filterChipText, dateFilter === 'today' ? { color: themeColors.background } : { color: themeColors.text }]}
-                                selectedColor={themeColors.background}
-                            >
-                                Today
-                            </Chip>
-                            <Chip
-                                selected={dateFilter === 'week'}
-                                onPress={() => setDateFilter('week')}
-                                style={[styles.filterChip, dateFilter === 'week' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
-                                textStyle={[styles.filterChipText, dateFilter === 'week' ? { color: themeColors.background } : { color: themeColors.text }]}
-                                selectedColor={themeColors.background}
-                            >
-                                Week
-                            </Chip>
-                            <Chip
-                                selected={dateFilter === 'month'}
-                                onPress={() => setDateFilter('month')}
-                                style={[styles.filterChip, dateFilter === 'month' ? { backgroundColor: themeColors.text } : { backgroundColor: themeColors.cardBorder }]}
-                                textStyle={[styles.filterChipText, dateFilter === 'month' ? { color: themeColors.background } : { color: themeColors.text }]}
-                                selectedColor={themeColors.background}
-                            >
-                                Month
-                            </Chip>
-                        </View>
-
-                        {/* Transactions List */}
-                        <FlashList
-                            data={groupedTransactions}
-                            keyExtractor={(item) => item.date}
-                            renderItem={renderGroup}
-                            contentContainerStyle={styles.listContent}
-                            ListEmptyComponent={
-                                <View style={styles.emptyContainer}>
-                                    <MaterialIcons name="receipt-long" size={ICON_SIZE.xxxl} color={themeColors.icon} />
-                                    <Text variant="bodyLarge" style={[styles.emptyText, { color: themeColors.icon }]}>
-                                        No transactions found
-                                    </Text>
-                                </View>
-                            }
-                        />
-                        {/* <FlatList
+                        }
+                    />
+                )}
+                {/* <FlatList
                             data={groupedTransactions}
                             keyExtractor={(item) => item.date}
                             renderItem={renderGroup}
@@ -467,145 +443,144 @@ export default function TransactionsScreen() {
                             }
                         /> */}
 
-                        {/* FAB for adding transaction */}
-                        <Portal>
-                            <FAB
-                                icon="plus"
-                                style={[styles.fab, { backgroundColor: themeColors.text }]}
-                                onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                    addSheetRef.current?.expand();
-                                }}
-                                color={themeColors.background}
+                {/* FAB for adding transaction */}
+                <Portal>
+                    <FAB
+                        icon="plus"
+                        style={[styles.fab, { backgroundColor: themeColors.text }]}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            addSheetRef.current?.expand();
+                        }}
+                        color={themeColors.background}
+                    />
+                </Portal>
+
+                {/* Transaction Detail Bottom Sheet */}
+                <BottomSheet
+                    ref={detailSheetRef}
+                    snapPoints={['75%']}
+                    enablePanDownToClose
+                    backdropComponent={renderBackdrop}
+                    backgroundStyle={{ backgroundColor: themeColors.card }}
+                    onChange={(index) => {
+                        if (index === -1) {
+                            setSelectedTransaction(null);
+                        }
+                    }}
+                >
+                    <View style={styles.sheetHeader}>
+                        <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
+                            Transaction Details
+                        </Text>
+                        <TouchableOpacity onPress={() => detailSheetRef.current?.close()}>
+                            <MaterialIcons name="close" size={ICON_SIZE.lg} color={themeColors.icon} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {selectedTransaction && (
+                        <BottomSheetScrollView style={styles.sheetBody}>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Receiver</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.receiver}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Amount</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.error }]}>
+                                    ₹{selectedTransaction.amount}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Reference</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.reference}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Date & Time</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {format(new Date(selectedTransaction.timestamp), 'dd MMM yyyy, hh:mm a')}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Bank</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.bankName}
+                                </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Account</Text>
+                                <Text style={[styles.detailValue, { color: themeColors.text }]}>
+                                    {selectedTransaction.accountNo}
+                                </Text>
+                            </View>
+                            <View style={[styles.rawMessageContainer, { backgroundColor: themeColors.background }]}>
+                                <Text style={[styles.rawMessageLabel, { color: themeColors.icon }]}>
+                                    Raw Message
+                                </Text>
+                                <Text style={[styles.rawMessageText, { color: themeColors.text }]}>
+                                    {selectedTransaction.rawMessage}
+                                </Text>
+                            </View>
+                        </BottomSheetScrollView>
+                    )}
+                </BottomSheet>
+
+                {/* Add Transaction Bottom Sheet */}
+                <BottomSheet
+                    ref={addSheetRef}
+                    index={-1}
+                    snapPoints={['55%']}
+                    enablePanDownToClose
+                    onChange={handleAddSheetChange}
+                    backdropComponent={renderBackdrop}
+                    backgroundStyle={{ backgroundColor: themeColors.card }}
+                >
+                    <View style={styles.sheetHeader}>
+                        <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
+                            Add Transaction
+                        </Text>
+                        <TouchableOpacity onPress={() => addSheetRef.current?.close()}>
+                            <MaterialIcons name="close" size={ICON_SIZE.lg} color={themeColors.icon} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <BottomSheetScrollView style={styles.sheetBody}>
+                        <View style={styles.inputGroup}>
+                            <CustomInput
+                                label="Receiver Name"
+                                placeholder="e.g., Swiggy, Amazon"
+                                value={newTransaction.receiver}
+                                onChangeText={(text) => setNewTransaction({ ...newTransaction, receiver: text })}
+                                icon="person"
                             />
-                        </Portal>
+                            <CustomInput
+                                label="Amount"
+                                placeholder="e.g., 500"
+                                value={newTransaction.amount}
+                                onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
+                                keyboardType="numeric"
+                                icon="currency-rupee"
+                            />
+                            <CustomInput
+                                label="Reference (Optional)"
+                                placeholder="e.g., Order #12345"
+                                value={newTransaction.reference}
+                                onChangeText={(text) => setNewTransaction({ ...newTransaction, reference: text })}
+                                icon="receipt"
+                            />
+                        </View>
 
-                        {/* Transaction Detail Bottom Sheet */}
-                        <BottomSheet
-                            ref={detailSheetRef}
-                            snapPoints={['75%']}
-                            enablePanDownToClose
-                            backdropComponent={renderBackdrop}
-                            backgroundStyle={{ backgroundColor: themeColors.card }}
-                            onChange={(index) => {
-                                if (index === -1) {
-                                    setSelectedTransaction(null);
-                                }
-                            }}
-                        >
-                            <View style={styles.sheetHeader}>
-                                <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
-                                    Transaction Details
-                                </Text>
-                                <TouchableOpacity onPress={() => detailSheetRef.current?.close()}>
-                                    <MaterialIcons name="close" size={ICON_SIZE.lg} color={themeColors.icon} />
-                                </TouchableOpacity>
-                            </View>
-
-                            {selectedTransaction && (
-                                <BottomSheetScrollView style={styles.sheetBody}>
-                                    <View style={styles.detailRow}>
-                                        <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Receiver</Text>
-                                        <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                            {selectedTransaction.receiver}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Amount</Text>
-                                        <Text style={[styles.detailValue, { color: themeColors.error }]}>
-                                            ₹{selectedTransaction.amount}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Reference</Text>
-                                        <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                            {selectedTransaction.reference}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Date & Time</Text>
-                                        <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                            {format(new Date(selectedTransaction.timestamp), 'dd MMM yyyy, hh:mm a')}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Bank</Text>
-                                        <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                            {selectedTransaction.bankName}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={[styles.detailLabel, { color: themeColors.icon }]}>Account</Text>
-                                        <Text style={[styles.detailValue, { color: themeColors.text }]}>
-                                            {selectedTransaction.accountNo}
-                                        </Text>
-                                    </View>
-                                    <View style={[styles.rawMessageContainer, { backgroundColor: themeColors.background }]}>
-                                        <Text style={[styles.rawMessageLabel, { color: themeColors.icon }]}>
-                                            Raw Message
-                                        </Text>
-                                        <Text style={[styles.rawMessageText, { color: themeColors.text }]}>
-                                            {selectedTransaction.rawMessage}
-                                        </Text>
-                                    </View>
-                                </BottomSheetScrollView>
-                            )}
-                        </BottomSheet>
-
-                        {/* Add Transaction Bottom Sheet */}
-                        <BottomSheet
-                            ref={addSheetRef}
-                            index={-1}
-                            snapPoints={['55%']}
-                            enablePanDownToClose
-                            onChange={handleAddSheetChange}
-                            backdropComponent={renderBackdrop}
-                            backgroundStyle={{ backgroundColor: themeColors.card }}
-                        >
-                            <View style={styles.sheetHeader}>
-                                <Text variant="headlineSmall" style={{ color: themeColors.text, fontWeight: '600' }}>
-                                    Add Transaction
-                                </Text>
-                                <TouchableOpacity onPress={() => addSheetRef.current?.close()}>
-                                    <MaterialIcons name="close" size={ICON_SIZE.lg} color={themeColors.icon} />
-                                </TouchableOpacity>
-                            </View>
-
-                            <BottomSheetScrollView style={styles.sheetBody}>
-                                <View style={styles.inputGroup}>
-                                    <CustomInput
-                                        label="Receiver Name"
-                                        placeholder="e.g., Swiggy, Amazon"
-                                        value={newTransaction.receiver}
-                                        onChangeText={(text) => setNewTransaction({ ...newTransaction, receiver: text })}
-                                        icon="person"
-                                    />
-                                    <CustomInput
-                                        label="Amount"
-                                        placeholder="e.g., 500"
-                                        value={newTransaction.amount}
-                                        onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
-                                        keyboardType="numeric"
-                                        icon="currency-rupee"
-                                    />
-                                    <CustomInput
-                                        label="Reference (Optional)"
-                                        placeholder="e.g., Order #12345"
-                                        value={newTransaction.reference}
-                                        onChangeText={(text) => setNewTransaction({ ...newTransaction, reference: text })}
-                                        icon="receipt"
-                                    />
-                                </View>
-
-                                <CustomButton
-                                    title="Add Transaction"
-                                    onPress={handleAddTransaction}
-                                    variant="secondary"
-                                    icon="add"
-                                />
-                            </BottomSheetScrollView>
-                        </BottomSheet>
-                    </>)}
+                        <CustomButton
+                            title="Add Transaction"
+                            onPress={handleAddTransaction}
+                            variant="secondary"
+                            icon="add"
+                        />
+                    </BottomSheetScrollView>
+                </BottomSheet>
             </View>
         </SafeAreaView>
     );
